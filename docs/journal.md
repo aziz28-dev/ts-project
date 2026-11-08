@@ -68,7 +68,7 @@ Ajoutés après relecture critique, pour anticiper deux objections probables :
 - **Test de moyenne robuste** (`eda.mean_test`, tab04b) : t classique 0,85 (XOM) / 0,78 (XLE) ; t HAC Newey-West (7 retards) 0,86 / 0,76, p = 0,39 / 0,45. Même conclusion : moyenne non significative.
 - **Sensibilité des outliers** (`eda.outlier_sensitivity`, tab08b et tab08c) : 16 réglages (fenêtre 21/63/126/252 × k 2/2,5/3/3,5). Le nombre de jours varie de 11 à 66 selon le réglage, mais un noyau de 11 jours (XOM) et 14 (XLE), signalés par au moins 12 réglages sur 16, est entièrement retrouvé par le réglage de référence. 4 jours limites par actif. Impact limité : les outliers sont conservés, seule l'indicatrice dépend du réglage.
 
-Reste à faire par l'étudiant : sourcer dans le rapport les événements associés aux chocs (2020-03-09, 2020-11-09, avril 2025).
+Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et intégrées au notebook le 2026-11-08, regroupées dans `docs/sources.md`. Recoupement : le Brent de notre cache perd −24,1 % le 2020-03-09, comme la baisse de 24 % à la clôture rapportée par la presse.
 
 ## Phase 3.1 — ARIMA / SARIMA (2026-11-08)
 
@@ -109,4 +109,4 @@ Reste à faire par l'étudiant : sourcer dans le rapport les événements associ
 
 **Pour la section 6** : VAR(1) et VECM comme candidats multivariés ; la marche aléatoire (= VAR(0) sans constante) reste la référence.
 
-**À sourcer dans le rapport** : la pondération de XOM dans l'ETF XLE.
+**Pondération de XOM dans XLE** : 24,47 % au 2026-11-05 (StockAnalysis), premier composant devant Chevron (18,78 %) ; valeur historique sur 2016-2024 non vérifiée. Voir `docs/sources.md`.
