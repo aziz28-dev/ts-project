@@ -92,6 +92,12 @@ L'écart z = β′y évolue selon z_t = (1 + β′α) z_{t−1}. Quand les deux 
 **Le VECM va-t-il mieux prévoir à 10 jours ?**
 Probablement pas. Avec une demi-vie de 63 jours, le rappel ne corrige qu'environ 10 % d'un écart en 10 jours. La section 6 le vérifiera.
 
+**Que montrent les IRF et la FEVD ?**
+Un choc sur XLE fait bouger XOM de +1,63 % le jour même, et la réponse est nulle dès le 2ᵉ jour, avec les deux ordres de Cholesky. Il n'y a donc pas de transmission retardée, ce qui confirme le test de Granger.
+
+**XLE explique 84 % de la variance de XOM : XLE entraîne donc XOM ?**
+Non. Avec l'ordre inverse, ce chiffre tombe à 0,3 %. Les 84 % sont simplement la corrélation des chocs au carré (0,915²) : la FEVD attribue le choc commun du jour même à la variable placée en premier. On ne peut pas dire qui entraîne qui sans un SVAR ou des données intrajournalières.
+
 ## GARCH (§3.3)
 
 **Pourquoi un GARCH ?**
@@ -118,10 +124,10 @@ En partie. L'invasion produit un pic de 46,9 % le 16 mars 2022. Mais le maximum 
 ## R et Python (§8.1)
 
 **Pourquoi le projet existe-t-il en deux langages ?**
-Le cahier l'exige pour le socle classique (§8.1). `notebooks/classical_R.Rmd` reproduit les phases 1 à 3 avec quantmod, forecast, urca, vars et rugarch, puis compare 88 grandeurs à leur valeur Python.
+Le cahier l'exige pour le socle classique (§8.1). `notebooks/classical_R.Rmd` reproduit les phases 1 à 3 avec quantmod, forecast, urca, vars et rugarch, puis compare 91 grandeurs à leur valeur Python.
 
 **Les résultats sont-ils les mêmes ?**
-Oui : 68 grandeurs identiques à moins de 0,1 %, 14 à moins de 2 %, et 6 écarts, tous expliqués. **Aucune conclusion ne change.**
+Oui : 71 grandeurs identiques à moins de 0,1 %, 14 à moins de 2 %, et 6 écarts, tous expliqués. **Aucune conclusion ne change.**
 
 **D'où viennent les écarts ?**
 Uniquement de réglages par défaut différents, et à chaque fois on retrouve le résultat Python en imposant le même réglage en R :
@@ -134,6 +140,30 @@ Uniquement de réglages par défaut différents, et à chaque fois on retrouve l
 Oui, deux choses :
 1. **L'ARIMA(3,1,2) a une vraisemblance à plusieurs sommets.** R s'arrête sur un sommet plus bas, et son `auto.arima` choisit alors ARIMA(5,1,0). Le choix de l'AIC est donc instable, alors que celui du BIC (marche aléatoire) est le même dans les deux langages.
 2. **Le test d'Engle-Granger dépend fortement des 8 premières observations** (janvier 2016) : la cointégration est fragile.
+
+## Deep learning (§4)
+
+**Pourquoi ne pas entraîner le réseau sur les prix ?**
+Les prix sont I(1) : un réseau entraîné dessus apprend à recopier la dernière valeur, ce qui donne une illusion de précision. On prédit donc les 10 rendements suivants, puis on reconstruit le prix.
+
+**Comment avez-vous évité les fuites de données ?**
+Par plusieurs précautions :
+- walk-forward chronologique, avec un gap de 10 jours entre la partie d'apprentissage et l'évaluation ;
+- scaler ajusté sur la partie apprentissage de chaque fold uniquement ;
+- early stopping sur les 10 % finaux de cette partie ;
+- hyperparamètres choisis sans jamais toucher au test.
+
+**Pourquoi le LSTM ne bat-il pas la marche aléatoire ?**
+Parce qu'il n'y a rien à apprendre dans la moyenne : les sections 2 et 3 ont montré un bruit blanc. Le réseau produit des prévisions quasi constantes (écart-type 0,06 % contre 1,3 % pour les rendements réels) : il redécouvre la marche aléatoire.
+
+**Pourquoi 3 seeds ?**
+Changer la seed fait varier la prévision autant que son amplitude. La moyenne des 3 seeds réduit ce bruit d'initialisation, et la dispersion entre seeds montre que le « signal » appris n'est pas fiable.
+
+**Et l'hybride ?**
+L'ARIMA modélise la partie linéaire et le LSTM ses résidus. Il ne bat la marche aléatoire sur aucun fold, car les résidus n'ont pas de structure non linéaire dans la moyenne. La seule structure prévisible est la variance, qui relève du GARCH.
+
+**Pourquoi la sélection par gain et pas par RMSE ?**
+La fenêtre de 60 retire des observations, donc les RMSE bruts ne portent pas sur les mêmes échantillons. Le gain face à la prévision zéro, calculé sur les mêmes points, est comparable d'une configuration à l'autre.
 
 ## Usage de l'IA
 

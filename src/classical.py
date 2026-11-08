@@ -437,6 +437,35 @@ def spread_half_life(z: pd.Series) -> dict:
     return {"rho": rho, "demi-vie (jours)": float(np.log(0.5) / np.log(rho)) if 0 < rho < 1 else np.inf}
 
 
+def irf_fevd(R: pd.DataFrame, order: list, p: int = 1, horizon: int = 10):
+    """IRF orthogonalisées (Cholesky) et FEVD d'un VAR(p), pour un ordre donné des variables.
+
+    L'ordre de Cholesky est une hypothèse d'identification : la première variable
+    peut affecter la seconde le jour même, pas l'inverse. On l'impose explicitement
+    pour pouvoir comparer les deux ordres possibles (cours, chap. 2, diapos 23-24).
+    Renvoie (résultats VAR, objet IRF, tableau long des réponses, tableau FEVD).
+    """
+    from statsmodels.tsa.api import VAR
+
+    v = VAR(R[order].reset_index(drop=True)).fit(p)
+    irf = v.irf(horizon)
+    resp, se = irf.orth_irfs, irf.stderr(orth=True)
+    rows = []
+    for i, rep in enumerate(order):
+        for j, shock in enumerate(order):
+            for h in range(horizon + 1):
+                rows.append({"ordre de Cholesky": " → ".join(order), "choc": shock, "réponse de": rep, "h": h,
+                             "réponse (%)": resp[h, i, j], "erreur-type": se[h, i, j],
+                             "significative (|t| > 1,96)": bool(se[h, i, j] > 0 and abs(resp[h, i, j]) > 1.96 * se[h, i, j])})
+    dec = v.fevd(horizon).decomp           # (variable, horizon, choc)
+    frows = []
+    for i, rep in enumerate(order):
+        for h in (1, 5, horizon):
+            frows.append({"ordre de Cholesky": " → ".join(order), "variable prévue": rep, "horizon h": h,
+                          **{f"part due au choc {s}": dec[i, h - 1, j] for j, s in enumerate(order)}})
+    return v, irf, pd.DataFrame(rows), pd.DataFrame(frows)
+
+
 def vecm_diagnostics(v, name: str, hs=(10, 20)) -> dict:
     """Mêmes diagnostics qu'un VAR, sur les résidus du VECM."""
     e = np.asarray(v.resid)

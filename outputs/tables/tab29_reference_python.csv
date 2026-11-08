@@ -87,6 +87,9 @@ vecm_k1_alpha_XOM,-0.00205903793823717,VECM (k = 1) : α de XOM
 vecm_k1_alpha_XLE,0.007808848517912918,VECM (k = 1) : α de XLE
 vecm_k1_demi_vie,63.565536247910146,VECM (k = 1) : demi-vie de l'écart
 vecm_k0_demi_vie,62.57940176571048,VECM (k = 0) : demi-vie (modèle retenu en Python)
+irf_xom_choc_xle_h0,1.6309466307708678,"IRF : réponse de XOM à un choc XLE, jour 0 (ordre XLE → XOM)"
+irf_xom_choc_xle_h1,-0.07862539637254656,"IRF : réponse de XOM à un choc XLE, jour 1"
+fevd_xom_part_xle_h10,0.8361889238212771,"FEVD : part du choc XLE dans la variance de prévision de XOM, h = 10"
 garch11_n_llf,-4082.7586222437258,log-vraisemblance garch11_n
 garch11_n_omega,0.014784283954201664,garch11_n : omega
 garch11_n_alpha[1],0.07665882749005941,garch11_n : alpha[1]

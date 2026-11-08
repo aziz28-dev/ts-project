@@ -254,6 +254,22 @@ c(`XLE → XOM, classique` = g("XLE_ret"), `XLE → XOM, HC3` = g("XLE_ret", vco
   `XOM → XLE, classique` = g("XOM_ret"))
 ```
 
+```{r irf-fevd, fig.height=4}
+# IRF orthogonalisées et FEVD : dans vars, l'ordre de Cholesky est l'ordre des colonnes.
+# On place XLE en premier (choc sectoriel → XOM le jour même), puis on inverse pour la robustesse.
+v_xle_first <- VAR(R[, c("XLE_ret", "XOM_ret")], p = 1, type = "const")
+v_xom_first <- VAR(R[, c("XOM_ret", "XLE_ret")], p = 1, type = "const")
+irf_r <- irf(v_xle_first, impulse = "XLE_ret", response = "XOM_ret", n.ahead = 10, ortho = TRUE,
+             boot = TRUE, runs = 500, ci = 0.95)
+plot(irf_r, main = "Réponse de XOM à un choc XLE (ordre XLE → XOM, IC bootstrap à 95 %)")
+fevd_tab <- rbind(`XLE → XOM : part de XLE dans la variance de XOM` = fevd(v_xle_first, n.ahead = 10)$XOM_ret[c(1, 5, 10), "XLE_ret"],
+                  `XOM → XLE : part de XLE dans la variance de XOM` = fevd(v_xom_first, n.ahead = 10)$XOM_ret[c(1, 5, 10), "XLE_ret"])
+colnames(fevd_tab) <- c("h = 1", "h = 5", "h = 10")
+round(fevd_tab, 4)
+```
+
+Même lecture qu'en Python (§3.2.6) : la réponse est entièrement concentrée sur le jour 0 et nulle dès le 2ᵉ jour, quel que soit l'ordre. La FEVD, en revanche, dépend entièrement de l'ordre de Cholesky (≈ 84 % ou ≈ 0 %), car elle ne fait qu'attribuer la corrélation contemporaine des chocs (0,915² ≈ 0,84) à la variable placée en premier.
+
 ```{r cointegration}
 # Engle-Granger : régression de long terme puis ADF sans constante sur le résidu (même procédure que statsmodels.coint).
 u <- residuals(lm(as.numeric(L$XOM) ~ as.numeric(L$XLE)))
@@ -347,6 +363,9 @@ r_vals <- list(
   granger_p1_XLE_XOM_classique = g("XLE_ret"), granger_p1_XLE_XOM_HC3 = g("XLE_ret", vcovHC(v1)),
   granger_p1_XOM_XLE_classique = g("XOM_ret"),
   eg_stat_XOM_sur_XLE = eg,
+  irf_xom_choc_xle_h0 = irf(v_xle_first, impulse = "XLE_ret", response = "XOM_ret", n.ahead = 10, ortho = TRUE, boot = FALSE)$irf$XLE_ret[1, "XOM_ret"],
+  irf_xom_choc_xle_h1 = irf(v_xle_first, impulse = "XLE_ret", response = "XOM_ret", n.ahead = 10, ortho = TRUE, boot = FALSE)$irf$XLE_ret[2, "XOM_ret"],
+  fevd_xom_part_xle_h10 = fevd(v_xle_first, n.ahead = 10)$XOM_ret[10, "XLE_ret"],
   `johansen_trace_k=1` = joh_tab["trace", 1], `johansen_lmax_k=1` = joh_tab["lambda_max", 1],
   `johansen_trace_k=6` = joh_tab["trace", 2], `johansen_lmax_k=6` = joh_tab["lambda_max", 2],
   `johansen_trace_k=8` = joh_tab["trace", 3], `johansen_lmax_k=8` = joh_tab["lambda_max", 3],

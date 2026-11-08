@@ -105,6 +105,11 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - **Cointégration jugée faible et fragile** ; VECM estimé conditionnellement (r = 1, k = 0, constante restreinte).
 - VECM : β = (1 ; −1,128), constante −0,453 ; α(XOM) = −0,0006 (p = 0,93), α(XLE) = +0,0093 (p = 0,16) ; β'α = −0,0110 → **demi-vie de 62,6 jours** (identique avec un AR(1) de l'écart, ρ = 0,989). Portmanteau standardisé p = 0,53.
 
+**Complément IRF / FEVD** (ajouté après relecture du cours, diapo 56 ; §3.2.6, figure 11b, tab24b/tab24c), sur le VAR(1) avec les deux ordres de Cholesky :
+- Réponse de XOM à un choc d'un écart-type sur XLE : +1,63 % le jour 0 (erreur-type 0,03), −0,08 % le jour 1 (erreur-type 0,04), nulle ensuite. Même schéma avec l'autre ordre. **Pas de transmission retardée** : c'est la version dynamique du résultat de Granger.
+- FEVD de XOM à h = 10 : 83,6 % due à XLE avec l'ordre XLE → XOM, 0,3 % avec l'ordre XOM → XLE. Ce chiffre de 83,7 % à h = 1 est exactement 0,915². La FEVD ne fait qu'attribuer la covariance du jour même à la variable placée en premier, donc la répartition contemporaine n'est pas identifiable sans restrictions supplémentaires (SVAR).
+- R (`vars::irf`, `vars::fevd`) reproduit les 3 valeurs à 1e-15 près.
+
 **Écart au plan** : la formule de demi-vie ln(0,5)/ln(1 + α) du plan suppose qu'un seul actif s'ajuste. En bivarié, la bonne vitesse est β'α (on obtiendrait sinon plus de 1 200 jours avec α(XOM)).
 
 **Pour la section 6** : VAR(1) et VECM comme candidats multivariés ; la marche aléatoire (= VAR(0) sans constante) reste la référence.
@@ -129,13 +134,55 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 
 ## Phase 3d — Socle classique en R et comparaison avec Python (2026-11-08)
 
-**Implémentation** : `notebooks/classical_R.Rmd` (quantmod, forecast, tseries, urca, vars, sandwich, FinTS, rugarch), rendu dans `notebooks/classical_R.html` (versionné pour être lisible sans R). Le notebook Python exporte 88 valeurs clés (`tab29_reference_python.csv`, §3.4) ; le Rmd calcule les mêmes et produit `tab30_comparaison_R_python.csv`. Pandoc 3.13 installé (winget), requis par rmarkdown.
+**Implémentation** : `notebooks/classical_R.Rmd` (quantmod, forecast, tseries, urca, vars, sandwich, FinTS, rugarch), rendu dans `notebooks/classical_R.html` (versionné pour être lisible sans R). Le notebook Python exporte 91 valeurs clés (88 au départ, plus 3 pour l'IRF et la FEVD) (`tab29_reference_python.csv`, §3.4) ; le Rmd calcule les mêmes et produit `tab30_comparaison_R_python.csv`. Pandoc 3.13 installé (winget), requis par rmarkdown.
 
 **Choix** : même cache CSV qu'en Python (données identiques) ; quantmod sert de vérification (2 514 lignes, écart relatif max 8,8e-07 : mêmes données). Mêmes réglages imposés quand c'est possible (retards KPSS et Zivot-Andrews de Python, maxlag ADF = 27). `urca::ca.jo` exige K ≥ 2 → comparaison de Johansen et du VECM avec 1 retard en différences, calculés aussi en Python.
 
-**Résultat** : sur 88 grandeurs, 68 identiques (< 0,1 %), 14 très proches (< 2 %), 6 écarts expliqués et vérifiés. **Aucune conclusion ne change.**
+**Résultat** : sur 91 grandeurs, 71 identiques (< 0,1 %), 14 très proches (< 2 %), 6 écarts expliqués et vérifiés. **Aucune conclusion ne change.**
 - ADF log-prix (−0,948 contre −0,971) et Engle-Granger (−4,41 contre −3,46) : urca estime sur l'échantillon raccourci par le retard maximal ; avec les retards de Python imposés, R retrouve exactement −0,9714 et −3,4565. L'EG est très sensible aux 8 premières observations (janvier 2016, écart au plus haut).
 - ARIMA(3,1,2) : R s'arrête sur un maximum local (−4 511,1) ; démarré aux coefficients de Python, il retrouve −4 504,631. Conséquence : auto.arima (AIC) choisit ARIMA(5,1,0) en R (AIC 9 033,74 dans les deux langages). Confirme l'instabilité du choix de l'AIC ; le BIC donne ARIMA(0,1,0) dans les deux.
 - VAR, BIC : 1 en R contre 0 en Python, car VARselect ne teste que 1 à 10.
 - GARCH : paramètres à 0,3–1,6 % près, log-vraisemblance environ 0,3 de moins ; cause : variance initiale (backcast 4,48 dans arch, moyenne des r² 3,18 dans rugarch). Aux paramètres Python, rugarch donne −4 045,62, et Python avec la convention de rugarch aussi.
 - Granger : p-values à 0,1–0,3 % près (ddl système 4 514 dans vars, équation seule 2 257 en Python).
+
+## Phase 4 — LSTM, GRU et hybride (Python uniquement, 2026-11-08)
+
+**Implémentation** : `src/deep.py` ; notebook §4. Tableaux tab31 à tab35, figures 15 et 16. Prévisions du test dans `data/processed/deep_test_forecasts.csv`.
+
+**Protocole**
+- Cible : les 10 rendements suivants de XOM (sortie directe h = 10), à partir des fenêtres passées de 3 variables : XOM_ret, XLE_ret, XOM_vol21.
+- Validation : walk-forward sur le train uniquement (`TimeSeriesSplit`, 5 folds, gap de 10 jours pour éviter que les cibles chevauchent l'évaluation).
+- Préparation et entraînement : scaler ajusté sur la partie apprentissage de chaque fold ; early stopping (patience 10) sur les 10 % finaux de cette partie, avec restauration des meilleurs poids ; 3 seeds (42, 43, 44) avec déterminisme des opérations.
+- Grille réduite : 2 modèles × fenêtre {20, 60} × unités {32, 64} × dropout {0,2 ; 0,4}, soit 16 configurations et 80 entraînements.
+
+**Critère de sélection.** On retient le meilleur **gain moyen face à la prévision zéro**, calculé sur les mêmes échantillons. Le RMSE brut ne convient pas : la fenêtre de 60 retire des observations, donc les échantillons diffèrent d'une configuration à l'autre.
+
+**Résultats**
+- Les 16 configurations perdent toutes face à la marche aléatoire : gain moyen de −0,14 % à −0,43 %, au plus 2 folds sur 5 battus. La fenêtre de 20 jours fait toujours mieux que celle de 60.
+- Configurations retenues : LSTM (20 ; 64 ; 0,2) et GRU (20 ; 32 ; 0,4).
+- RMSE moyen sur les 5 folds (rendements en %) :
+
+  | Modèle | RMSE moyen |
+  | --- | --- |
+  | Zéro | 1,8450 |
+  | Moyenne d'apprentissage | 1,8457 |
+  | LSTM | 1,8472 |
+  | GRU | 1,8482 |
+  | ARIMA(3,1,2) | 1,8501 |
+  | Hybride | 1,8527 |
+
+- Le réseau n'apprend rien de généralisable :
+  - la perte de validation est plate dès l'époque 1 (0,4348 puis 0,4343 au minimum pour le LSTM, seed 42) ;
+  - les prévisions sont quasi constantes (écart-type 0,058 % contre 1,297 % pour les rendements réalisés au fold 5) ;
+  - leur corrélation avec la réalisation est de 0,016.
+- Les seeds font varier les prévisions autant que leur amplitude (dispersion de 0,044 % pour le LSTM, 0,035 % pour le GRU). On utilise donc la moyenne des 3 seeds.
+- L'hybride ARIMA(3,1,2) + LSTM sur les résidus ne bat la marche aléatoire sur aucun fold et fait moins bien que l'ARIMA seul sur 3 folds sur 5.
+- Reproductibilité : une deuxième exécution complète redonne exactement les mêmes tables, seules les durées changent.
+
+**Décision.** Aucun modèle profond ne bat la marche aléatoire, ce qui est cohérent avec les sections 2 et 3 : la moyenne des rendements n'a pas de structure exploitable. Les modèles finaux (moyenne des 3 seeds) sont transmis à la section 6, qui testera les écarts avec Diebold-Mariano.
+
+**Limites.**
+- La grille est réduite : le taux d'apprentissage, le nombre de couches et la taille des lots n'ont pas été optimisés.
+- Le Brent n'a pas été utilisé comme variable d'entrée.
+- Prophet n'a pas été estimé : il n'y a pas de saisonnalité (§2.4).
+- Une piste plus prometteuse serait d'appliquer les réseaux à la variance plutôt qu'à la moyenne.
