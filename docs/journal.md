@@ -61,3 +61,11 @@ Résultats, décisions et justifications, phase par phase. Sert de base à la r�
 **Conclusion : d = 1, D = 0** pour les log-prix de XOM et de XLE (I(1)) ; rendements I(0).
 
 **Pour la phase 3** : ARIMA(0,1,0) comme référence, constante probablement non significative ; SARIMA s = 5 à estimer puis écarter ; VAR sur rendements ; cointégration testable (deux séries I(1)) ; GARCH-t.
+
+### Phase 2 — compléments de robustesse (2026-11-08)
+
+Ajoutés après relecture critique, pour anticiper deux objections probables :
+- **Test de moyenne robuste** (`eda.mean_test`, tab04b) : t classique 0,85 (XOM) / 0,78 (XLE) ; t HAC Newey-West (7 retards) 0,86 / 0,76, p = 0,39 / 0,45. Même conclusion : moyenne non significative.
+- **Sensibilité des outliers** (`eda.outlier_sensitivity`, tab08b et tab08c) : 16 réglages (fenêtre 21/63/126/252 × k 2/2,5/3/3,5). Le nombre de jours varie de 11 à 66 selon le réglage, mais un noyau de 11 jours (XOM) et 14 (XLE), signalés par au moins 12 réglages sur 16, est entièrement retrouvé par le réglage de référence. 4 jours limites par actif. Impact limité : les outliers sont conservés, seule l'indicatrice dépend du réglage.
+
+Reste à faire par l'étudiant : sourcer dans le rapport les événements associés aux chocs (2020-03-09, 2020-11-09, avril 2025).

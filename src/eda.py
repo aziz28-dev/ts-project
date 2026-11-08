@@ -48,6 +48,29 @@ def descriptive_stats(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def mean_test(r: pd.Series) -> pd.DataFrame:
+    """Test H0 : moyenne nulle, avec écart-type classique puis robuste HAC (Newey-West).
+
+    L'écart-type classique suppose des rendements i.i.d. ; or ils sont hétéroscédastiques
+    (et faiblement autocorrélés). Le HAC corrige les deux. Nombre de retards :
+    règle usuelle floor(4 (n/100)^(2/9)).
+    """
+    import statsmodels.api as sm
+
+    r = r.dropna()
+    n = len(r)
+    lags = int(np.floor(4 * (n / 100) ** (2 / 9)))
+    model = sm.OLS(r.to_numpy(), np.ones(n))
+    rows = {}
+    for label, fit in {
+        "classique (i.i.d.)": model.fit(),
+        f"HAC Newey-West ({lags} retards)": model.fit(cov_type="HAC", cov_kwds={"maxlags": lags}),
+    }.items():
+        rows[label] = {"moyenne": fit.params[0], "écart-type": fit.bse[0],
+                       "statistique t": fit.tvalues[0], "p-value": fit.pvalues[0]}
+    return pd.DataFrame(rows).T
+
+
 # ---------------------------------------------------------------------------
 # Autocorrélations
 # ---------------------------------------------------------------------------
@@ -196,6 +219,34 @@ def detect_outliers(r: pd.Series, window: int | None = None, k: float | None = N
     flag = (r < low) | (r > high)
     return pd.DataFrame({"rendement": r, "borne basse": low, "borne haute": high,
                          "outlier": flag.astype(int)})
+
+
+def outlier_sensitivity(r: pd.Series, test_index: pd.Index, windows=(21, 63, 126, 252),
+                        ks=(2.0, 2.5, 3.0, 3.5), core_share: float = 0.75):
+    """Sensibilité de la détection au couple (fenêtre, k).
+
+    Renvoie (grille, noyau) : la grille donne, pour chaque réglage, le nombre de jours
+    signalés et combien de jours du réglage de référence (config.yaml) il retrouve ;
+    le noyau liste les jours signalés par au moins `core_share` des réglages, donc
+    indépendants d'un choix de paramètre particulier.
+    """
+    ref = detect_outliers(r)["outlier"]
+    flags, rows = {}, []
+    for w in windows:
+        for k in ks:
+            o = detect_outliers(r, window=w, k=k)["outlier"]
+            flags[(w, k)] = o
+            rows.append({"fenêtre": w, "k": k, "total": int(o.sum()),
+                         "dont 2020": int(o[o.index.year == 2020].sum()),
+                         "dont test": int(o.loc[test_index].sum()),
+                         "jours de la référence retrouvés": int((o & ref).sum())})
+    grid = pd.DataFrame(rows).set_index(["fenêtre", "k"])
+    freq = pd.concat(flags, axis=1).sum(axis=1)
+    n_cfg = len(flags)
+    core = freq[freq >= core_share * n_cfg]
+    core = pd.DataFrame({"rendement": r.loc[core.index], "réglages qui le signalent": core.astype(int),
+                         "dans la référence": ref.loc[core.index].astype(bool)})
+    return grid, core
 
 
 # ---------------------------------------------------------------------------
