@@ -37,3 +37,6 @@ desktop.ini
 
 # Modèle Word régénéré à chaque construction du rapport
 rapport/reference.docx
+
+# Emplacement de l environnement Python choisi par install.py (propre à chaque machine)
+.venv-path
