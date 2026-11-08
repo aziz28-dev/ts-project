@@ -10,7 +10,13 @@ Documents de référence (dans `docs/`) :
 - `docs/cahier_des_charges.md` : cahier des charges, **fait foi** en cas de conflit.
 - `docs/PLAN.md` : plan validé (phases 0 à 9, table de traçabilité des exigences, prompts par phase, checklist d'envoi).
 
-État actuel : phase 0 en cours. L'arborescence, `config.yaml`, `requirements.txt`, `install_packages.R`, `src/utils.py` et le README sont créés. Le dépôt git est initialisé (branche `main`). L'installation n'est pas encore vérifiée : Python 3.11 et R ne sont pas installés sur la machine (le `python3.exe` du PATH est le raccourci Microsoft Store).
+État actuel : phase 0 terminée, installation vérifiée (Python 3.11.9 dans `.venv`, R 4.6.2). Prochaine étape : phase 1 (données).
+
+Environnement local (Windows) :
+- Python du projet : `.venv\Scripts\python.exe`. Le `python3.exe` du PATH est le raccourci Microsoft Store, ne pas l'utiliser.
+- Rscript : `C:\Program Files\R\R-4.6.2\bin\Rscript.exe` (pas dans le PATH) ; packages dans la bibliothèque personnelle `R_LIBS_USER`.
+- Un script lancé hors de la racine a besoin de `PYTHONPATH` pointant sur la racine pour importer `src`.
+- quantmod : `to` exclut la date de fin, contrairement à `config.yaml`. Utiliser `to = end + 1 jour` pour aligner l'échantillon R sur Python.
 
 ## Données
 

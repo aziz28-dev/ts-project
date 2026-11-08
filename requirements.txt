@@ -6,8 +6,8 @@ numpy==1.26.4
 pandas==2.2.3
 scipy==1.13.1
 pyyaml==6.0.2
-# yfinance suit les changements de l'API Yahoo : version figée après installation (pip freeze)
-yfinance>=0.2.54,<0.3
+# yfinance suit les changements de l'API Yahoo : version vérifiée le 2026-11-08
+yfinance==0.2.66
 
 # Visualisation
 matplotlib==3.9.2
@@ -21,7 +21,11 @@ arch==7.0.0
 # Apprentissage (section 4) — scikit-learn 1.5 : pmdarima 2.0.4 casse avec 1.6
 scikit-learn==1.5.2
 tensorflow==2.16.2
+keras==3.15.1
+# Windows : TensorFlow exige Microsoft Visual C++ Redistributable (msvcp140_1.dll)
 prophet==1.1.6
+# cmdstanpy 1.3 rejette le CmdStan allégé embarqué par prophet 1.1.6 (pas de makefile)
+cmdstanpy==1.2.5
 
 # Notebooks
 jupyter==1.1.1

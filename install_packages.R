@@ -2,10 +2,17 @@
 # Usage : Rscript install_packages.R  (R >= 4.3)
 
 # Snapshot CRAN daté (Posit Package Manager) : fige les versions sans renv,
-# donc la même installation sur toute machine vierge.
-options(repos = c(CRAN = "https://packagemanager.posit.co/cran/2025-10-01"))
+# donc la même installation sur toute machine vierge. Date postérieure à R 4.6 :
+# le snapshot fournit alors des binaires Windows, sans besoin de Rtools.
+options(repos = c(CRAN = "https://packagemanager.posit.co/cran/2026-10-01"))
 
 if (getRversion() < "4.3.0") stop("R >= 4.3 requis, version trouvée : ", getRversion())
+
+# Bibliothèque personnelle créée si besoin : la bibliothèque système (Program Files)
+# n'est pas accessible en écriture sans droits admin, et Rscript ne propose pas de la créer.
+user_lib <- Sys.getenv("R_LIBS_USER")
+if (!dir.exists(user_lib)) dir.create(user_lib, recursive = TRUE)
+.libPaths(c(user_lib, .libPaths()))
 
 packages <- c(
   # Données et séries temporelles
