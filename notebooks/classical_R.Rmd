@@ -1,0 +1,437 @@
+---
+title: "Mini-projet Séries Temporelles TEK-UP 2026 — socle classique en R"
+subtitle: "Reproduction des phases 1 à 3 (données, analyse exploratoire, ARIMA, VAR, cointégration, GARCH) et comparaison avec Python"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: false
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+# Options de rendu : on affiche le code (le cahier demande un code lisible) mais pas les messages de chargement.
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 4.5,
+                      dpi = 110, comment = "")
+```
+
+Ce document reproduit en **R** le socle classique du projet (section 3 du cahier des charges, exigée en R **et** en Python, §8.1), ainsi que la préparation des données et l'analyse exploratoire qui le justifient. Les interprétations détaillées se trouvent dans le notebook Python (`notebooks/main_python.ipynb`). L'objet de ce document est de **vérifier que R retrouve les mêmes résultats** et d'**expliquer les écarts**, présentés dans un tableau final.
+
+Exécution : `Rscript -e "rmarkdown::render('notebooks/classical_R.Rmd')"` depuis la racine du projet (packages : `Rscript install_packages.R`).
+
+# 0. Environnement
+
+```{r packages}
+suppressPackageStartupMessages({
+  library(here); library(yaml)
+  library(xts); library(zoo); library(quantmod)
+  library(forecast); library(tseries); library(urca); library(vars)
+  library(lmtest); library(sandwich); library(FinTS); library(rugarch)
+})
+# Seed fixée : seule source d'aléa ici, l'initialisation éventuelle de l'optimiseur de rugarch.
+set.seed(42)
+# Chemins relatifs à la racine du projet (repérée par le dossier .git) : aucun chemin local en dur.
+cfg <- yaml::read_yaml(here("config.yaml"))
+pk <- c("quantmod", "xts", "forecast", "tseries", "urca", "vars", "sandwich", "FinTS", "rugarch", "rmarkdown")
+data.frame(package = c("R", pk), version = c(as.character(getRversion()),
+                                               vapply(pk, function(p) as.character(packageVersion(p)), "")))
+```
+
+# 1. Données
+
+## 1.1 Lecture du cache et vérification avec quantmod
+
+Pour comparer R et Python **sur des données strictement identiques**, on lit le même cache CSV que Python (`data/raw/`, téléchargé avec `yfinance`). Yahoo recalcule l'Adj Close à chaque dividende : deux téléchargements à des dates différentes ne donneraient pas les mêmes prix. On utilise ensuite `quantmod` pour **vérifier** que Yahoo renvoie bien les mêmes prix aujourd'hui. Le `to` de `getSymbols` exclut la date de fin : on passe donc le lendemain du dernier jour de la période.
+
+```{r donnees}
+read_cache <- function(ticker) {
+  f <- here("data", "raw", paste0(gsub("=", "_", ticker), ".csv"))
+  d <- read.csv(f, check.names = FALSE)
+  xts(d[["Adj Close"]], order.by = as.Date(d$Date))
+}
+tk <- cfg$data$tickers
+xom <- read_cache(tk$target); xle <- read_cache(tk$sector)
+# Jointure interne : seuls les jours où les deux actifs cotent (comme en Python).
+prices <- merge(xom, xle, join = "inner"); colnames(prices) <- c("XOM", "XLE")
+cat(nrow(prices), "jours de bourse, du", format(start(prices)), "au", format(end(prices)), "\n")
+```
+
+```{r quantmod}
+# Vérification indépendante : téléchargement direct via quantmod (le réseau peut manquer, d'où tryCatch).
+end_excl <- format(as.Date(cfg$data$end) + 1)
+check <- tryCatch({
+  q <- getSymbols(tk$target, src = "yahoo", from = cfg$data$start, to = end_excl, auto.assign = FALSE)
+  qa <- Ad(q); m <- merge(qa, xom, join = "inner")
+  data.frame(`lignes quantmod` = nrow(qa), `lignes cache` = nrow(xom),
+             `écart absolu max (USD)` = max(abs(m[, 1] - m[, 2])),
+             `écart relatif max` = max(abs(m[, 1] / m[, 2] - 1)), check.names = FALSE)
+}, error = function(e) data.frame(`quantmod indisponible` = conditionMessage(e), check.names = FALSE))
+check
+```
+
+`r if ("écart relatif max" %in% names(check)) sprintf("Résultat : quantmod renvoie %d lignes pour %d dans le cache, avec un écart relatif maximal de %.1e sur l'Adj Close. Si cet écart est de l'ordre de l'arrondi, les deux sources sont identiques. S'il est plus grand, Yahoo a réajusté l'historique depuis la constitution du cache (nouveau dividende), ce qui justifie justement de travailler sur le cache figé.", check[[1]], check[[2]], check[[4]]) else "quantmod n'a pas pu se connecter à Yahoo : l'analyse se poursuit sur le cache, ce qui illustre son intérêt."`
+
+## 1.2 Variables dérivées et découpage 90/10
+
+```{r features}
+logp <- log(prices)
+ret <- 100 * diff(logp)            # log-rendements en %
+vol21 <- sqrt(cfg$features$annualization) * rollapply(ret, cfg$features$realized_vol_window, sd, align = "right")
+n <- nrow(prices); n_train <- floor(cfg$split$train_ratio * n)
+train_idx <- index(prices)[1:n_train]
+test_idx <- index(prices)[(n_train + 1):n]
+cat("Train :", n_train, "jours (", format(train_idx[1]), "→", format(tail(train_idx, 1)), ")\n")
+cat("Test  :", n - n_train, "jours (", format(test_idx[1]), "→", format(tail(test_idx, 1)), ")\n")
+# Séries du train utilisées dans toute la suite (comme en Python : identification sur le train seulement).
+L <- logp[train_idx]
+r_xom <- as.numeric(na.omit(ret$XOM[train_idx]))
+r_xle <- as.numeric(na.omit(ret$XLE[train_idx]))
+R <- na.omit(ret[train_idx]); colnames(R) <- c("XOM_ret", "XLE_ret")
+```
+
+```{r fig-prix, fig.height=4}
+plot.zoo(prices, main = "Prix ajustés et coupure train/test", xlab = "", col = c("steelblue", "darkorange"))
+```
+
+# 2. Analyse exploratoire (train)
+
+## 2.1 Statistiques descriptives
+
+```{r stats}
+moments <- function(x) {
+  m <- mean(x); s <- sd(x); z <- (x - m)
+  # Skewness et kurtosis « population » (mêmes définitions que scipy, valeurs par défaut).
+  sk <- mean(z^3) / mean(z^2)^1.5; ku <- mean(z^4) / mean(z^2)^2 - 3
+  c(moyenne = m, ecart_type = s, skewness = sk, exces_kurtosis = ku,
+    jarque_bera = unname(jarque.bera.test(x)$statistic))
+}
+desc <- rbind(XOM = moments(r_xom), XLE = moments(r_xle)); round(desc, 4)
+```
+
+## 2.2 Autocorrélations
+
+```{r acf, fig.height=7}
+par(mfrow = c(3, 2), mar = c(4, 4, 3, 1))
+acf(as.numeric(L$XOM), lag.max = 40, main = "ACF log-prix XOM"); pacf(as.numeric(L$XOM), lag.max = 40, main = "PACF log-prix XOM")
+acf(r_xom, lag.max = 40, main = "ACF rendements XOM"); pacf(r_xom, lag.max = 40, main = "PACF rendements XOM")
+acf(r_xom^2, lag.max = 40, main = "ACF rendements² XOM"); pacf(r_xom^2, lag.max = 40, main = "PACF rendements² XOM")
+```
+
+Même lecture qu'en Python (§2.3) : décroissance très lente pour le log-prix, quasi-bruit blanc pour les rendements, forte autocorrélation des carrés (effets ARCH).
+
+## 2.3 Décomposition STL et force des composantes
+
+```{r stl}
+# Même réglage que statsmodels : fenêtre saisonnière 7, version robuste.
+stl_strength <- function(x, period) {
+  s <- stl(ts(as.numeric(x), frequency = period), s.window = 7, robust = TRUE)$time.series
+  c(F_T = max(0, 1 - var(s[, "remainder"]) / var(s[, "trend"] + s[, "remainder"])),
+    F_S = max(0, 1 - var(s[, "remainder"]) / var(s[, "seasonal"] + s[, "remainder"])))
+}
+strength <- rbind(`période 5` = stl_strength(L$XOM, 5), `période 252` = stl_strength(L$XOM, 252))
+round(strength, 4)
+```
+
+```{r fig-stl, fig.height=6}
+plot(stl(ts(as.numeric(L$XOM), frequency = 5), s.window = 7, robust = TRUE), main = "STL robuste du log-prix XOM, période 5")
+```
+
+## 2.4 Valeurs aberrantes (IQR glissant sur les 63 jours précédents, k = 3)
+
+```{r outliers}
+count_outliers <- function(x, w = cfg$features$outlier_window, k = cfg$features$outlier_iqr_k) {
+  x <- as.numeric(na.omit(x))
+  q1 <- rollapply(x, w, quantile, probs = 0.25, align = "right", fill = NA)
+  q3 <- rollapply(x, w, quantile, probs = 0.75, align = "right", fill = NA)
+  q1 <- c(NA, head(q1, -1)); q3 <- c(NA, head(q3, -1))   # décalage d'un jour : seuil calculé sur le passé
+  iqr <- q3 - q1
+  sum((x < q1 - k * iqr) | (x > q3 + k * iqr), na.rm = TRUE)
+}
+c(XOM = count_outliers(ret$XOM), XLE = count_outliers(ret$XLE))
+```
+
+## 2.5 Stationnarité : ADF, KPSS, Zivot-Andrews
+
+`urca` ne fournit pas de p-values pour ADF et KPSS, seulement des valeurs critiques. Pour comparer les **statistiques** à Python, on impose les mêmes nombres de retards : ADF avec choix par AIC jusqu'à ⌈12 (n/100)^(1/4)⌉ = 27 retards, comme `statsmodels` ; KPSS avec le nombre de retards trouvé par `statsmodels`, puis avec la règle par défaut de `urca`.
+
+```{r stationnarite}
+py <- read.csv(here("outputs", "tables", "tab29_reference_python.csv"), check.names = FALSE)
+# La colonne mélange nombres et textes (dates, noms de modèles) : conversion explicite des nombres.
+pyv <- setNames(suppressWarnings(as.numeric(py$valeur_python)), py$clé)
+maxlag <- ceiling(12 * (n_train / 100)^(1 / 4))
+adf <- function(x, type) {
+  t <- ur.df(as.numeric(x), type = type, lags = maxlag, selectlags = "AIC")
+  # Nombre de retards retenus = lignes de la régression de test moins constante, niveau retardé et tendance.
+  c(stat = unname(t@teststat[1]), retards = nrow(t@testreg$coefficients) - 1 - (type != "none") - (type == "trend"),
+    VC5 = unname(t@cval[1, "5pct"]))
+}
+kpss <- function(x, type, lag) {
+  t <- ur.kpss(as.numeric(x), type = type, use.lag = lag)
+  c(stat = unname(t@teststat), VC5 = unname(t@cval[1, "5pct"]))
+}
+stat_tab <- rbind(
+  `ADF log-prix, constante` = adf(L$XOM, "drift"),
+  `ADF log-prix, constante + tendance` = adf(L$XOM, "trend"),
+  `ADF rendement, constante` = adf(r_xom, "drift"))
+kpss_tab <- rbind(
+  `KPSS log-prix, constante (retards Python)` = c(kpss(L$XOM, "mu", pyv[["kpss_lags_XOM_logprix_c"]]), retards = pyv[["kpss_lags_XOM_logprix_c"]]),
+  `KPSS log-prix, tendance (retards Python)` = c(kpss(L$XOM, "tau", pyv[["kpss_lags_XOM_logprix_ct"]]), retards = pyv[["kpss_lags_XOM_logprix_ct"]]),
+  `KPSS rendement, constante (retards Python)` = c(kpss(r_xom, "mu", pyv[["kpss_lags_XOM_rendement_c"]]), retards = pyv[["kpss_lags_XOM_rendement_c"]]),
+  `KPSS log-prix, constante (règle urca « long »)` = {t <- ur.kpss(as.numeric(L$XOM), type = "mu", lags = "long"); c(stat = t@teststat, VC5 = t@cval[1, "5pct"], retards = t@lag)})
+round(stat_tab, 4); round(kpss_tab, 4)
+```
+
+```{r zivot}
+za <- function(x, model, lag) {
+  t <- ur.za(as.numeric(x), model = model, lag = lag)
+  c(stat = unname(t@teststat), VC5 = unname(t@cval[2]), rupture = as.numeric(index(x)[t@bpoint]))
+}
+za_tab <- rbind(`rupture de niveau` = za(L$XOM, "intercept", pyv[["za_lags_c"]]),
+                `rupture de niveau et de pente` = za(L$XOM, "both", pyv[["za_lags_ct"]]))
+data.frame(statistique = round(za_tab[, "stat"], 4), `VC 5 %` = za_tab[, "VC5"],
+           `date de rupture` = as.Date(za_tab[, "rupture"]), check.names = FALSE)
+```
+
+Conclusion identique à Python : log-prix I(1), rendements I(0), donc **d = 1**.
+
+# 3. Modélisation classique
+
+## 3.1 ARIMA et SARIMA (`forecast`)
+
+Comme en Python, un ARIMA(p,1,q) du log-prix est estimé sous la forme ARMA(p,q) des rendements en %, par maximum de vraisemblance exacte.
+
+```{r arima}
+fit_arma <- function(p, q, mean = FALSE) Arima(r_xom, order = c(p, 0, q), include.mean = mean, method = "ML")
+cands <- list(`ARIMA(0,1,0)` = fit_arma(0, 0), `ARIMA(1,1,0)` = fit_arma(1, 0), `ARIMA(0,1,1)` = fit_arma(0, 1),
+              `ARIMA(1,1,1)` = fit_arma(1, 1), `ARIMA(0,1,0) + dérive` = fit_arma(0, 0, TRUE), `ARIMA(3,1,2)` = fit_arma(3, 2))
+arima_tab <- data.frame(`log-vraisemblance` = sapply(cands, logLik), AIC = sapply(cands, AIC), BIC = sapply(cands, BIC),
+                        check.names = FALSE)
+arima_tab[order(arima_tab$AIC), ]
+```
+
+```{r auto-arima}
+# Recherche exhaustive, sans approximation, d = 0 sur les rendements (d = 1 sur le log-prix, établi en §2).
+auto <- lapply(c(aic = "aic", bic = "bic"), function(ic)
+  auto.arima(r_xom, d = 0, D = 0, max.p = 5, max.q = 5, max.order = 5, seasonal = FALSE,
+             stepwise = FALSE, approximation = FALSE, ic = ic, allowmean = TRUE, allowdrift = FALSE))
+auto_lab <- sapply(auto, function(m) { o <- arimaorder(m); sprintf("ARIMA(%d,1,%d)", o[["p"]], o[["q"]]) })
+auto_lab
+sapply(auto, function(m) c(AIC = m$aic, BIC = m$bic, constante = "intercept" %in% names(coef(m))))
+```
+
+```{r sarima}
+sar <- Arima(r_xom, order = c(0, 0, 0), seasonal = list(order = c(1, 0, 0), period = 5), include.mean = FALSE, method = "ML")
+c(`coefficient SAR(1)[5]` = unname(coef(sar)["sar1"]), `ΔAIC vs (0,1,0)` = AIC(sar) - AIC(cands$`ARIMA(0,1,0)`))
+```
+
+```{r diagnostics-arima, fig.height=5}
+# Diagnostic complet de la marche aléatoire : Ljung-Box (ddl corrigés de p + q = 0), Jarque-Bera, ARCH-LM.
+e_rw <- residuals(cands$`ARIMA(0,1,0)`)
+rw_diag <- c(`Ljung-Box Q(10)` = unname(Box.test(e_rw, lag = 10, type = "Ljung-Box", fitdf = 0)$statistic),
+             `Jarque-Bera` = unname(jarque.bera.test(e_rw)$statistic),
+             `ARCH-LM(5)` = unname(ArchTest(e_rw, lags = 5)$statistic))
+round(rw_diag, 3)
+checkresiduals(cands$`ARIMA(0,1,0)`, test = FALSE)
+```
+
+Décision identique à Python : **ARIMA(0,1,0)** retenu (choix du BIC), ARIMA(3,1,2) (choix de l'AIC) gardé comme concurrent, SARIMA s = 5 écarté.
+
+## 3.2 VAR, causalité de Granger, cointégration (`vars`, `urca`)
+
+```{r var}
+sel <- VARselect(R, lag.max = 10, type = "const")$selection; sel
+v1 <- VAR(R, p = 1, type = "const")
+A1 <- Acoef(v1)[[1]]; round(A1, 4)
+c(`stable (module max)` = max(roots(v1)),
+  `Portmanteau ajusté h = 10` = unname(serial.test(v1, lags.pt = 10, type = "PT.adjusted")$serial$statistic))
+```
+
+```{r granger}
+# F classique, puis Wald robuste à l'hétéroscédasticité (matrice HC3 de sandwich).
+g <- function(cause, vc = NULL) causality(v1, cause = cause, vcov. = vc)$Granger$p.value[1, 1]
+c(`XLE → XOM, classique` = g("XLE_ret"), `XLE → XOM, HC3` = g("XLE_ret", vcovHC(v1)),
+  `XOM → XLE, classique` = g("XOM_ret"))
+```
+
+```{r cointegration}
+# Engle-Granger : régression de long terme puis ADF sans constante sur le résidu (même procédure que statsmodels.coint).
+u <- residuals(lm(as.numeric(L$XOM) ~ as.numeric(L$XLE)))
+eg <- ur.df(u, type = "none", lags = maxlag, selectlags = "AIC")@teststat[1]
+c(`Engle-Granger (stat.)` = eg)
+# Johansen : K = retards en niveaux = retards en différences + 1. urca impose K ≥ 2.
+joh <- function(K, type) {
+  t <- ca.jo(coredata(L), ecdet = "none", type = type, K = K, spec = "transitory")
+  unname(t@teststat[length(t@teststat)])          # dernière valeur = H0 : r = 0
+}
+joh_tab <- sapply(c(`k = 1 (K = 2)` = 2, `k = 6 (K = 7)` = 7, `k = 8 (K = 9)` = 9),
+                  function(K) c(trace = joh(K, "trace"), lambda_max = joh(K, "eigen")))
+round(joh_tab, 3)
+ca.jo(coredata(L), ecdet = "none", type = "trace", K = 2, spec = "transitory")@cval
+```
+
+```{r vecm}
+# VECM à constante restreinte, r = 1, K = 2 (k = 1) : le plus petit modèle permis par urca.
+cj <- ca.jo(coredata(L), ecdet = "const", type = "trace", K = 2, spec = "transitory")
+vecm <- cajorls(cj, r = 1)
+beta <- vecm$beta[, 1]; alpha <- coef(vecm$rlm)["ect1", ]
+speed <- sum(beta[1:2] * alpha)
+round(c(beta_XLE = beta[[2]], constante = beta[[3]], alpha_XOM = alpha[[1]], alpha_XLE = alpha[[2]],
+        `β'α` = speed, `demi-vie (jours)` = log(0.5) / log(1 + speed)), 5)
+```
+
+## 3.3 GARCH (`rugarch`)
+
+Moyenne nulle (marche aléatoire sans dérive), comme en Python.
+
+```{r garch}
+spec <- function(model, dist) ugarchspec(variance.model = list(model = model, garchOrder = c(1, 1)),
+                                         mean.model = list(armaOrder = c(0, 0), include.mean = FALSE),
+                                         distribution.model = dist)
+fits <- list(garch11_n = ugarchfit(spec("sGARCH", "norm"), r_xom, solver = "hybrid"),
+             garch11_t = ugarchfit(spec("sGARCH", "std"), r_xom, solver = "hybrid"),
+             gjr11_t = ugarchfit(spec("gjrGARCH", "std"), r_xom, solver = "hybrid"))
+garch_tab <- t(sapply(fits, function(f) {
+  cf <- coef(f)
+  c(llf = likelihood(f), omega = cf[["omega"]], alpha = cf[["alpha1"]],
+    gamma = if ("gamma1" %in% names(cf)) cf[["gamma1"]] else NA, beta = cf[["beta1"]],
+    nu = if ("shape" %in% names(cf)) cf[["shape"]] else NA, persistance = persistence(f))
+}))
+round(garch_tab, 4)
+```
+
+```{r garch-diag}
+gjr <- fits$gjr11_t
+z <- as.numeric(residuals(gjr, standardize = TRUE)); nu <- coef(gjr)[["shape"]]
+c(`Ljung-Box z (10), p` = Box.test(z, 10, "Ljung-Box")$p.value,
+  `Ljung-Box z² (10), p` = Box.test(z^2, 10, "Ljung-Box")$p.value,
+  `ARCH-LM(5) sur z` = unname(ArchTest(z, lags = 5)$statistic),
+  `KS contre la Student, p` = ks.test(z, function(q) pdist("std", q, mu = 0, sigma = 1, shape = nu))$p.value)
+```
+
+```{r fig-garch, fig.height=4}
+plot(xts(sigma(gjr) * sqrt(252), order.by = index(R)), main = "Volatilité conditionnelle GJR(1,1)-t (% annualisé)", col = "firebrick")
+```
+
+# 4. Comparaison R / Python
+
+```{r comparaison}
+r_vals <- list(
+  n_jours = n, n_train = n_train, n_test = n - n_train, debut_test = format(test_idx[1]),
+  XOM_moyenne = desc["XOM", "moyenne"], XOM_ecart_type = desc["XOM", "ecart_type"], XOM_skewness = desc["XOM", "skewness"],
+  XOM_exces_kurtosis = desc["XOM", "exces_kurtosis"], XOM_jarque_bera = desc["XOM", "jarque_bera"],
+  XLE_skewness = desc["XLE", "skewness"], XLE_exces_kurtosis = desc["XLE", "exces_kurtosis"],
+  XOM_nb_outliers = count_outliers(ret$XOM), XLE_nb_outliers = count_outliers(ret$XLE),
+  stl_FS_p5 = strength["période 5", "F_S"], stl_FT_p5 = strength["période 5", "F_T"], stl_FT_p252 = strength["période 252", "F_T"],
+  adf_stat_XOM_logprix_c = stat_tab[1, "stat"], adf_lags_XOM_logprix_c = stat_tab[1, "retards"],
+  adf_stat_XOM_logprix_ct = stat_tab[2, "stat"], adf_stat_XOM_rendement_c = stat_tab[3, "stat"],
+  adf_lags_XOM_rendement_c = stat_tab[3, "retards"],
+  kpss_stat_XOM_logprix_c = kpss_tab[1, "stat"], kpss_stat_XOM_logprix_ct = kpss_tab[2, "stat"],
+  kpss_stat_XOM_rendement_c = kpss_tab[3, "stat"],
+  za_stat_c = za_tab[1, "stat"], za_stat_ct = za_tab[2, "stat"],
+  za_date_c = format(as.Date(za_tab[1, "rupture"])), za_date_ct = format(as.Date(za_tab[2, "rupture"])),
+  `aic_ARIMA(0,1,0)` = AIC(cands$`ARIMA(0,1,0)`), `aic_ARIMA(1,1,0)` = AIC(cands$`ARIMA(1,1,0)`),
+  `aic_ARIMA(0,1,1)` = AIC(cands$`ARIMA(0,1,1)`), `aic_ARIMA(1,1,1)` = AIC(cands$`ARIMA(1,1,1)`),
+  `aic_ARIMA(0,1,0) + dérive` = AIC(cands$`ARIMA(0,1,0) + dérive`), `aic_ARIMA(3,1,2)` = AIC(cands$`ARIMA(3,1,2)`),
+  `llf_ARIMA(3,1,2)` = as.numeric(logLik(cands$`ARIMA(3,1,2)`)),
+  `ar1_ARIMA(1,1,0)` = coef(cands$`ARIMA(1,1,0)`)[["ar1"]],
+  `derive_ARIMA(0,1,0)` = coef(cands$`ARIMA(0,1,0) + dérive`)[["intercept"]],
+  auto_arima_aic = auto_lab[["aic"]], auto_arima_bic = auto_lab[["bic"]],
+  rw_ljungbox_10 = rw_diag[["Ljung-Box Q(10)"]], rw_jarque_bera = rw_diag[["Jarque-Bera"]], rw_archlm_5 = rw_diag[["ARCH-LM(5)"]],
+  sar5_coef = coef(sar)[["sar1"]], sar5_delta_aic = AIC(sar) - AIC(cands$`ARIMA(0,1,0)`),
+  var_ordre_AIC = sel[["AIC(n)"]], var_ordre_BIC = sel[["SC(n)"]], var_ordre_HQIC = sel[["HQ(n)"]], var_ordre_FPE = sel[["FPE(n)"]],
+  # Acoef : ligne = équation, colonne = variable retardée (ordre XOM, XLE).
+  `var1_XOM_ret_L1.XOM_ret` = A1[1, 1], `var1_XOM_ret_L1.XLE_ret` = A1[1, 2],
+  `var1_XLE_ret_L1.XOM_ret` = A1[2, 1], `var1_XLE_ret_L1.XLE_ret` = A1[2, 2],
+  var1_portmanteau_10 = unname(serial.test(v1, lags.pt = 10, type = "PT.adjusted")$serial$statistic),
+  granger_p1_XLE_XOM_classique = g("XLE_ret"), granger_p1_XLE_XOM_HC3 = g("XLE_ret", vcovHC(v1)),
+  granger_p1_XOM_XLE_classique = g("XOM_ret"),
+  eg_stat_XOM_sur_XLE = eg,
+  `johansen_trace_k=1` = joh_tab["trace", 1], `johansen_lmax_k=1` = joh_tab["lambda_max", 1],
+  `johansen_trace_k=6` = joh_tab["trace", 2], `johansen_lmax_k=6` = joh_tab["lambda_max", 2],
+  `johansen_trace_k=8` = joh_tab["trace", 3], `johansen_lmax_k=8` = joh_tab["lambda_max", 3],
+  vecm_k1_beta_XLE = beta[[2]], vecm_k1_const = beta[[3]], vecm_k1_alpha_XOM = alpha[[1]], vecm_k1_alpha_XLE = alpha[[2]],
+  vecm_k1_demi_vie = log(0.5) / log(1 + speed),
+  garch11_n_llf = garch_tab["garch11_n", "llf"], garch11_n_omega = garch_tab["garch11_n", "omega"],
+  `garch11_n_alpha[1]` = garch_tab["garch11_n", "alpha"], `garch11_n_beta[1]` = garch_tab["garch11_n", "beta"],
+  garch11_n_persistance = garch_tab["garch11_n", "persistance"],
+  garch11_t_llf = garch_tab["garch11_t", "llf"], garch11_t_omega = garch_tab["garch11_t", "omega"],
+  `garch11_t_alpha[1]` = garch_tab["garch11_t", "alpha"], `garch11_t_beta[1]` = garch_tab["garch11_t", "beta"],
+  garch11_t_nu = garch_tab["garch11_t", "nu"], garch11_t_persistance = garch_tab["garch11_t", "persistance"],
+  gjr11_t_llf = garch_tab["gjr11_t", "llf"], gjr11_t_omega = garch_tab["gjr11_t", "omega"],
+  `gjr11_t_alpha[1]` = garch_tab["gjr11_t", "alpha"], `gjr11_t_gamma[1]` = garch_tab["gjr11_t", "gamma"],
+  `gjr11_t_beta[1]` = garch_tab["gjr11_t", "beta"], gjr11_t_nu = garch_tab["gjr11_t", "nu"],
+  gjr11_t_persistance = garch_tab["gjr11_t", "persistance"],
+  gjr11_t_archlm5_z = unname(ArchTest(z, lags = 5)$statistic),
+  gjr11_t_ks_p = ks.test(z, function(q) pdist("std", q, mu = 0, sigma = 1, shape = nu))$p.value)
+
+cmp <- merge(py, data.frame(clé = names(r_vals), valeur_r = vapply(r_vals, function(v) as.character(v), "")),
+             by = "clé", sort = FALSE)
+num_py <- suppressWarnings(as.numeric(cmp$valeur_python)); num_r <- suppressWarnings(as.numeric(cmp$valeur_r))
+cmp$`écart relatif` <- ifelse(is.na(num_py) | is.na(num_r), NA, abs(num_r - num_py) / pmax(abs(num_py), 1e-8))
+cmp$verdict <- ifelse(is.na(cmp$`écart relatif`), ifelse(cmp$valeur_python == cmp$valeur_r, "identique", "DIFFÉRENT"),
+               ifelse(cmp$`écart relatif` < 1e-3, "identique (< 0,1 %)",
+               ifelse(cmp$`écart relatif` < 0.02, "très proche (< 2 %)", "écart notable")))
+fmt <- function(v) ifelse(is.na(suppressWarnings(as.numeric(v))), v, formatC(as.numeric(v), digits = 5, format = "g"))
+cmp_out <- data.frame(grandeur = cmp$description, Python = fmt(cmp$valeur_python), R = fmt(cmp$valeur_r),
+                      `écart relatif` = ifelse(is.na(cmp$`écart relatif`), "", sprintf("%.2g", cmp$`écart relatif`)),
+                      verdict = cmp$verdict, check.names = FALSE)
+write.csv(cbind(clé = cmp$clé, cmp_out), here("outputs", "tables", "tab30_comparaison_R_python.csv"),
+          row.names = FALSE, fileEncoding = "UTF-8")
+table(cmp$verdict)
+cmp_out
+```
+
+## 4.1 Vérification des écarts
+
+Chaque écart notable est reproduit ci-dessous dans des conditions identiques à Python, pour en établir la cause plutôt que la supposer.
+
+```{r verification-ecarts}
+verif <- list()
+# (1) ADF : même nombre de retards (18) imposé, sans sélection.
+verif$`ADF log-prix, 18 retards imposés` <- ur.df(as.numeric(L$XOM), "drift", lags = 18)@teststat[1]
+# (2) Engle-Granger : même nombre de retards que statsmodels (19) imposé.
+verif$`Engle-Granger, 19 retards imposés` <- ur.df(u, type = "none", lags = 19)@teststat[1]
+# (3) ARIMA(3,1,2) démarré aux coefficients trouvés par Python (sans reparamétrisation, trop proche de la frontière).
+f312 <- Arima(r_xom, order = c(3, 0, 2), include.mean = FALSE, method = "ML", transform.pars = FALSE,
+              init = c(-1.6595, -0.8521, 0.0319, 1.6453, 0.8656))
+verif$`ARIMA(3,1,2), départ Python : log-vraisemblance` <- as.numeric(logLik(f312))
+verif$`ARIMA(3,1,2), départ par défaut de R : log-vraisemblance` <- as.numeric(logLik(cands$`ARIMA(3,1,2)`))
+verif$`ARIMA(5,1,0), choix de auto.arima : AIC` <- AIC(Arima(r_xom, order = c(5, 0, 0), include.mean = FALSE, method = "ML"))
+# (4) VARselect : ordres effectivement testés.
+verif$`VARselect : plus petit ordre testé` <- min(as.numeric(colnames(VARselect(R, lag.max = 10, type = "const")$criteria)))
+# (5) GARCH : vraisemblance de rugarch évaluée aux paramètres exacts de Python.
+sp_fix <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
+                     mean.model = list(armaOrder = c(0, 0), include.mean = FALSE), distribution.model = "std",
+                     fixed.pars = list(omega = pyv[["garch11_t_omega"]], alpha1 = pyv[["garch11_t_alpha[1]"]],
+                                       beta1 = pyv[["garch11_t_beta[1]"]], shape = pyv[["garch11_t_nu"]]))
+verif$`GARCH(1,1)-t aux paramètres Python, filtre rugarch : log-vraisemblance` <- likelihood(ugarchfilter(sp_fix, r_xom))
+verif$`variance initiale de rugarch (moyenne des r²)` <- mean(r_xom^2)
+data.frame(vérification = names(verif), valeur = round(unlist(verif), 4), row.names = NULL)
+```
+
+## 4.2 Explication des écarts
+
+**Bilan.** Sur `r nrow(cmp)` grandeurs comparées, `r sum(grepl("identique", cmp$verdict))` sont identiques (écart relatif < 0,1 %) et `r sum(cmp$verdict == "très proche (< 2 %)")` très proches (< 2 %). **Aucune conclusion du projet ne change entre R et Python.** Les données, le découpage, les statistiques descriptives, les valeurs aberrantes, KPSS, Zivot-Andrews, les ARIMA de petit ordre, le SARIMA, les coefficients du VAR(1), le Portmanteau, Johansen et le VECM coïncident à la précision numérique près.
+
+Les écarts restants ont tous une cause identifiée et vérifiée :
+
+| Écart | Cause | Preuve |
+| --- | --- | --- |
+| **ADF du log-prix** : −0,948 en R contre −0,971 en Python, avec le même nombre de retards (18) | `urca` estime le modèle retenu sur l'échantillon raccourci par le retard **maximal** testé (27). `statsmodels` le ré-estime sur l'échantillon le plus long permis par le retard **choisi** (18), soit 9 observations de plus. | Avec 18 retards imposés, R donne −0,9714, comme Python. Conclusion identique : racine unitaire non rejetée (valeur critique à 5 % : −2,86). |
+| **Engle-Granger** : −4,41 en R contre −3,46 en Python, avec le même nombre de retards (19) | Même cause que pour l'ADF. Ici l'effet est grand, parce que les 8 observations en plus ou en moins tombent en janvier 2016, quand l'écart à l'équilibre était au plus haut (figure 11 du notebook Python). | Avec 19 retards imposés, R donne −3,4565, comme Python. Les deux statistiques dépassent la valeur critique à 5 % (−3,34). L'écart montre surtout que ce test est **sensible aux toutes premières observations**, ce qui confirme le diagnostic de cointégration fragile. |
+| **ARIMA(3,1,2)** : log-vraisemblance −4 511,1 en R contre −4 504,6 en Python | La vraisemblance de ce modèle a **plusieurs maxima locaux**, conséquence de la quasi-annulation des racines AR et MA (§3.1 Python). Partant d'un autre point initial, l'optimiseur de R s'arrête sur un sommet moins haut. | Démarré aux coefficients de Python, R retrouve exactement −4 504,631. |
+| **`auto.arima` (AIC)** : ARIMA(5,1,0) en R contre ARIMA(3,1,2) en Python | Conséquence directe de la ligne précédente : R ayant mal estimé l'ARIMA(3,1,2), le meilleur AIC qu'il voit est celui de l'ARIMA(5,1,0), qui vaut 9 033,74 dans les **deux** langages. | Ce désaccord renforce la décision du §3.1 : le choix de l'AIC est **instable**, alors que celui du BIC (ARIMA(0,1,0)) est identique dans les deux langages. |
+| **Ordre du VAR selon le BIC** : 1 en R contre 0 en Python | `vars::VARselect` ne teste que les ordres 1 à 10 et **ne peut pas choisir 0**. En Python, le BIC choisit 0 parce que cet ordre est disponible. | Le plus petit ordre testé par `VARselect` est 1. Les autres critères (AIC 9, HQ 7, FPE 9) coïncident. |
+| **Paramètres GARCH** (écarts de 0,3 à 1,6 %) et log-vraisemblance (environ 0,3 point de moins en R) | La variance **initiale** de la récurrence diffère : `arch` part d'une moyenne pondérée des premiers rendements au carré (« backcast », 4,48), `rugarch` de la moyenne de tous les rendements au carré (3,18). | Aux paramètres de Python, `rugarch` calcule une log-vraisemblance de −4 045,62. Avec la convention de `rugarch`, Python trouve −4 045,62 aussi. Les tests sur les résidus standardisés (ARCH-LM 14,0 contre 14,5 ; KS p = 0,46 contre 0,45) ne diffèrent que par ces petits écarts de paramètres. |
+| **p-values du test de Granger** (écart relatif de 0,1 à 0,3 %) | `vars::causality` teste le système complet (ddl du dénominateur : 2 × 2 257 = 4 514). Le test Python porte sur l'équation seule (2 257 ddl). | Même décision dans tous les cas. Avec HC3, l'écart tombe à 0,03 %. |
+| **Force de tendance STL**, période 252 : 0,8676 contre 0,8686 | Le STL robuste de R fait 1 itération interne par passe robuste, celui de `statsmodels` 2. | Saisonnalité nulle dans les deux cas. |
+
+**Conclusion.** Les deux implémentations donnent les **mêmes résultats lorsque les mêmes réglages sont imposés**. Les seuls écarts proviennent de conventions par défaut différentes : échantillon de sélection des retards, point de départ de l'optimiseur, variance initiale du GARCH, ordres testés par `VARselect`. Ces écarts ne modifient aucune décision du projet :
+- d = 1 ;
+- marche aléatoire retenue ;
+- pas de prédictibilité croisée robuste ;
+- cointégration faible ;
+- GJR(1,1) de Student, avec une persistance d'environ 0,999.
+
+Ils apportent même deux informations utiles : la **fragilité de l'ARIMA(3,1,2)**, dont la vraisemblance a plusieurs maxima, et celle du **test d'Engle-Granger**, sensible aux premières observations.

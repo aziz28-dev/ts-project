@@ -1,0 +1,109 @@
+clé,valeur_python,description
+n_jours,2514.0,jours de bourse XOM/XLE
+n_train,2262.0,jours du train
+n_test,252.0,jours du test
+debut_test,2024-12-30,premier jour du test
+XOM_moyenne,0.031852436160811154,moyenne des rendements XOM (train)
+XOM_ecart_type,1.7845312501553774,écart-type des rendements XOM (train)
+XOM_skewness,-0.1630435466738852,skewness des rendements XOM (train)
+XOM_exces_kurtosis,6.62244952194316,excès de kurtosis des rendements XOM (train)
+XOM_jarque_bera,4141.697017381006,Jarque-Bera des rendements XOM (train)
+XLE_moyenne,0.03146514272519138,moyenne des rendements XLE (train)
+XLE_ecart_type,1.9215825219579097,écart-type des rendements XLE (train)
+XLE_skewness,-0.8901615577993256,skewness des rendements XLE (train)
+XLE_exces_kurtosis,16.43571200430863,excès de kurtosis des rendements XLE (train)
+XLE_jarque_bera,25747.342825603188,Jarque-Bera des rendements XLE (train)
+XOM_nb_outliers,15.0,"jours extrêmes XOM (IQR 63 j, k = 3)"
+XLE_nb_outliers,18.0,"jours extrêmes XLE (IQR 63 j, k = 3)"
+stl_FS_p5,0.0,"force de saisonnalité STL, période 5 (XOM)"
+stl_FT_p5,0.9967771173484102,"force de tendance STL, période 5 (XOM)"
+stl_FS_p252,0.0,"force de saisonnalité STL, période 252 (XOM)"
+stl_FT_p252,0.8686023628508711,"force de tendance STL, période 252 (XOM)"
+adf_stat_XOM_logprix_c,-0.9714242018377,"ADF XOM log-prix, constante"
+adf_lags_XOM_logprix_c,18.0,"retards ADF (AIC) XOM log-prix, constante"
+kpss_stat_XOM_logprix_c,3.5632164248918383,"KPSS XOM log-prix, constante"
+kpss_lags_XOM_logprix_c,29.0,"retards KPSS XOM log-prix, constante"
+adf_stat_XOM_logprix_ct,-1.5995205728618647,"ADF XOM log-prix, constante + tendance"
+adf_lags_XOM_logprix_ct,18.0,"retards ADF (AIC) XOM log-prix, constante + tendance"
+kpss_stat_XOM_logprix_ct,1.3972474548737912,"KPSS XOM log-prix, constante + tendance"
+kpss_lags_XOM_logprix_ct,29.0,"retards KPSS XOM log-prix, constante + tendance"
+adf_stat_XOM_rendement_c,-10.556597006528486,"ADF XOM rendement, constante"
+adf_lags_XOM_rendement_c,17.0,"retards ADF (AIC) XOM rendement, constante"
+kpss_stat_XOM_rendement_c,0.1438736820416615,"KPSS XOM rendement, constante"
+kpss_lags_XOM_rendement_c,8.0,"retards KPSS XOM rendement, constante"
+adf_stat_XOM_rendement_ct,-10.568396376258196,"ADF XOM rendement, constante + tendance"
+adf_lags_XOM_rendement_ct,17.0,"retards ADF (AIC) XOM rendement, constante + tendance"
+kpss_stat_XOM_rendement_ct,0.08452552874084081,"KPSS XOM rendement, constante + tendance"
+kpss_lags_XOM_rendement_ct,8.0,"retards KPSS XOM rendement, constante + tendance"
+za_stat_c,-3.79402662662492,"Zivot-Andrews XOM log-prix, rupture de niveau"
+za_lags_c,18.0,"retards Zivot-Andrews, rupture de niveau"
+za_date_c,2021-12-20,"date de rupture Zivot-Andrews, rupture de niveau"
+za_stat_ct,-4.208050750990785,"Zivot-Andrews XOM log-prix, rupture de niveau et de pente"
+za_lags_ct,18.0,"retards Zivot-Andrews, rupture de niveau et de pente"
+za_date_ct,2020-01-06,"date de rupture Zivot-Andrews, rupture de niveau et de pente"
+"aic_ARIMA(0,1,0)",9037.1027880158,"AIC ARIMA(0,1,0)"
+"llf_ARIMA(0,1,0)",-4517.5513940079,"log-vraisemblance ARIMA(0,1,0)"
+"aic_ARIMA(1,1,0)",9037.839016460726,"AIC ARIMA(1,1,0)"
+"llf_ARIMA(1,1,0)",-4516.919508230363,"log-vraisemblance ARIMA(1,1,0)"
+"aic_ARIMA(0,1,1)",9037.871270530628,"AIC ARIMA(0,1,1)"
+"llf_ARIMA(0,1,1)",-4516.935635265314,"log-vraisemblance ARIMA(0,1,1)"
+"aic_ARIMA(1,1,1)",9038.910869323372,"AIC ARIMA(1,1,1)"
+"llf_ARIMA(1,1,1)",-4516.455434661686,"log-vraisemblance ARIMA(1,1,1)"
+"aic_ARIMA(0,1,0) + dérive",9038.382244067201,"AIC ARIMA(0,1,0) + dérive"
+"llf_ARIMA(0,1,0) + dérive",-4517.191122033601,"log-vraisemblance ARIMA(0,1,0) + dérive"
+"aic_ARIMA(3,1,2)",9021.262923795843,"AIC ARIMA(3,1,2)"
+"llf_ARIMA(3,1,2)",-4504.631461897921,"log-vraisemblance ARIMA(3,1,2)"
+"ar1_ARIMA(1,1,0)",-0.02363409290034391,coefficient AR(1)
+"derive_ARIMA(0,1,0)",0.031852436160811175,dérive (rendement moyen)
+auto_arima_aic,"ARIMA(3,1,2)",choix d'auto_arima (AIC)
+auto_arima_bic,"ARIMA(0,1,0)",choix d'auto_arima (BIC)
+rw_ljungbox_10,34.89955819705846,"Ljung-Box Q(10), résidus ARIMA(0,1,0)"
+rw_jarque_bera,4141.697017381006,"Jarque-Bera, résidus ARIMA(0,1,0)"
+rw_archlm_5,441.16772196576983,"ARCH-LM(5), résidus ARIMA(0,1,0)"
+sar5_coef,0.05818864865161197,coefficient SAR(1) de période 5
+sar5_delta_aic,-5.669632647610342,ΔAIC du SARIMA s = 5
+var_ordre_AIC,9.0,ordre du VAR choisi par AIC
+var_ordre_BIC,0.0,ordre du VAR choisi par BIC
+var_ordre_HQIC,7.0,ordre du VAR choisi par HQIC
+var_ordre_FPE,9.0,ordre du VAR choisi par FPE
+var1_XOM_ret_L1.XOM_ret,0.10097385619259108,"VAR(1), équation XOM_ret, coefficient L1.XOM_ret"
+var1_XOM_ret_L1.XLE_ret,-0.12676405772508026,"VAR(1), équation XOM_ret, coefficient L1.XLE_ret"
+var1_XLE_ret_L1.XOM_ret,0.104593849401195,"VAR(1), équation XLE_ret, coefficient L1.XOM_ret"
+var1_XLE_ret_L1.XLE_ret,-0.13441226819744362,"VAR(1), équation XLE_ret, coefficient L1.XLE_ret"
+var1_portmanteau_10,166.1444714168984,"Portmanteau ajusté (h = 10), VAR(1)"
+granger_p1_XLE_XOM_classique,0.008940492419105436,"Granger XLE → XOM, 1 retard, F classique"
+granger_p1_XLE_XOM_HC3,0.1954497197677963,"Granger XLE → XOM, 1 retard, HC3"
+granger_p1_XOM_XLE_classique,0.06274474240275905,"Granger XOM → XLE, 1 retard, F classique"
+eg_stat_XOM_sur_XLE,-3.4564886836779194,"Engle-Granger, XOM sur XLE, constante"
+johansen_trace_k=1,14.456570350401556,"Johansen trace (r = 0), k=1 retard(s) en différences"
+johansen_lmax_k=1,13.675071299580026,"Johansen λmax (r = 0), k=1"
+johansen_trace_k=6,15.799758538781191,"Johansen trace (r = 0), k=6 retard(s) en différences"
+johansen_lmax_k=6,15.132826672693612,"Johansen λmax (r = 0), k=6"
+johansen_trace_k=8,21.625422102240414,"Johansen trace (r = 0), k=8 retard(s) en différences"
+johansen_lmax_k=8,21.13935283299558,"Johansen λmax (r = 0), k=8"
+vecm_k1_beta_XLE,-1.1251561041708704,VECM (k = 1) : β de XLE (β de XOM normalisé à 1)
+vecm_k1_const,-0.4635534648341036,VECM (k = 1) : constante de la relation
+vecm_k1_alpha_XOM,-0.00205903793823717,VECM (k = 1) : α de XOM
+vecm_k1_alpha_XLE,0.007808848517912918,VECM (k = 1) : α de XLE
+vecm_k1_demi_vie,63.565536247910146,VECM (k = 1) : demi-vie de l'écart
+vecm_k0_demi_vie,62.57940176571048,VECM (k = 0) : demi-vie (modèle retenu en Python)
+garch11_n_llf,-4082.7586222437258,log-vraisemblance garch11_n
+garch11_n_omega,0.014784283954201664,garch11_n : omega
+garch11_n_alpha[1],0.07665882749005941,garch11_n : alpha[1]
+garch11_n_beta[1],0.9205535792883787,garch11_n : beta[1]
+garch11_n_persistance,0.997212406778438,persistance garch11_n
+garch11_t_llf,-4045.2562769646365,log-vraisemblance garch11_t
+garch11_t_omega,0.01025467373663787,garch11_t : omega
+garch11_t_alpha[1],0.06876657288971783,garch11_t : alpha[1]
+garch11_t_beta[1],0.9302303585657096,garch11_t : beta[1]
+garch11_t_nu,7.2992326181828995,garch11_t : nu
+garch11_t_persistance,0.9989969314554275,persistance garch11_t
+gjr11_t_llf,-4041.166875721279,log-vraisemblance gjr11_t
+gjr11_t_omega,0.009362119262001175,gjr11_t : omega
+gjr11_t_alpha[1],0.04296179978807379,gjr11_t : alpha[1]
+gjr11_t_gamma[1],0.04211060665211449,gjr11_t : gamma[1]
+gjr11_t_beta[1],0.9353004679040627,gjr11_t : beta[1]
+gjr11_t_nu,7.468118473114325,gjr11_t : nu
+gjr11_t_persistance,0.9993175710181937,persistance gjr11_t
+gjr11_t_archlm5_z,14.001858023778821,ARCH-LM(5) sur les résidus standardisés du GJR-t
+gjr11_t_ks_p,0.4572569821966056,"p-value KS, résidus standardisés du GJR-t contre la Student"

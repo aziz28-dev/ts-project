@@ -9,12 +9,13 @@ Modèles : ARIMA/SARIMA, VAR, cointégration/VECM, GARCH (en Python **et** en R)
 - Python **3.11** (les versions de `requirements.txt` sont figées pour 3.11)
 - R **≥ 4.3** (testé avec R 4.6.2 ; les binaires Windows du snapshot CRAN évitent Rtools)
 - Windows : **Microsoft Visual C++ Redistributable** (requis par TensorFlow)
+- **Pandoc** (requis par `rmarkdown` pour produire `classical_R.html` ; inclus dans RStudio, sinon `winget install JohnMacFarlane.Pandoc`)
 - Connexion internet au premier lancement. Les données sont ensuite relues depuis le cache `data/raw/`.
 
 Installation testée le 2026-11-08 sous Windows 10 :
 
 ```powershell
-winget install Python.Python.3.11 RProject.R Microsoft.VCRedist.2015+.x64 Git.Git
+winget install Python.Python.3.11 RProject.R Microsoft.VCRedist.2015+.x64 Git.Git JohnMacFarlane.Pandoc
 ```
 
 `requirements.txt` fige les dépendances directes ; `requirements-lock.txt` contient l'environnement exact vérifié (toutes les dépendances transitives).

@@ -20,7 +20,7 @@ packages <- c(
   # ARIMA, tests de stationnarité et de résidus
   "forecast", "tseries", "lmtest", "FinTS",
   # VAR, cointégration, VECM
-  "vars", "urca",
+  "vars", "urca", "sandwich",
   # GARCH (rmgarch : DCC-GARCH, extension §7)
   "rugarch", "rmgarch",
   # Rendu

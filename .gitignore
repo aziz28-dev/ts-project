@@ -11,6 +11,7 @@ __pycache__/
 # Rendus intermédiaires R
 notebooks/*_files/
 notebooks/*.html
+!notebooks/classical_R.html
 
 # Données : data/raw/ est VERSIONNÉ (cache Yahoo, cahier §8.3) ; processed se régénère
 data/processed/*

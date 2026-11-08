@@ -126,3 +126,16 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 **Décision** : ARIMA(0,1,0) + GJR(1,1)-t ; GARCH(1,1)-t comme référence.
 
 **Pour la section 6** : couverture des intervalles à 95 % (GJR contre variance constante) ; prévision de variance (QLIKE) ; tester une ré-estimation glissante à cause de la persistance gonflée.
+
+## Phase 3d — Socle classique en R et comparaison avec Python (2026-11-08)
+
+**Implémentation** : `notebooks/classical_R.Rmd` (quantmod, forecast, tseries, urca, vars, sandwich, FinTS, rugarch), rendu dans `notebooks/classical_R.html` (versionné pour être lisible sans R). Le notebook Python exporte 88 valeurs clés (`tab29_reference_python.csv`, §3.4) ; le Rmd calcule les mêmes et produit `tab30_comparaison_R_python.csv`. Pandoc 3.13 installé (winget), requis par rmarkdown.
+
+**Choix** : même cache CSV qu'en Python (données identiques) ; quantmod sert de vérification (2 514 lignes, écart relatif max 8,8e-07 : mêmes données). Mêmes réglages imposés quand c'est possible (retards KPSS et Zivot-Andrews de Python, maxlag ADF = 27). `urca::ca.jo` exige K ≥ 2 → comparaison de Johansen et du VECM avec 1 retard en différences, calculés aussi en Python.
+
+**Résultat** : sur 88 grandeurs, 68 identiques (< 0,1 %), 14 très proches (< 2 %), 6 écarts expliqués et vérifiés. **Aucune conclusion ne change.**
+- ADF log-prix (−0,948 contre −0,971) et Engle-Granger (−4,41 contre −3,46) : urca estime sur l'échantillon raccourci par le retard maximal ; avec les retards de Python imposés, R retrouve exactement −0,9714 et −3,4565. L'EG est très sensible aux 8 premières observations (janvier 2016, écart au plus haut).
+- ARIMA(3,1,2) : R s'arrête sur un maximum local (−4 511,1) ; démarré aux coefficients de Python, il retrouve −4 504,631. Conséquence : auto.arima (AIC) choisit ARIMA(5,1,0) en R (AIC 9 033,74 dans les deux langages). Confirme l'instabilité du choix de l'AIC ; le BIC donne ARIMA(0,1,0) dans les deux.
+- VAR, BIC : 1 en R contre 0 en Python, car VARselect ne teste que 1 à 10.
+- GARCH : paramètres à 0,3–1,6 % près, log-vraisemblance environ 0,3 de moins ; cause : variance initiale (backcast 4,48 dans arch, moyenne des r² 3,18 dans rugarch). Aux paramètres Python, rugarch donne −4 045,62, et Python avec la convention de rugarch aussi.
+- Granger : p-values à 0,1–0,3 % près (ddl système 4 514 dans vars, équation seule 2 257 en Python).

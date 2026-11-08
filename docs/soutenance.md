@@ -115,6 +115,26 @@ Presque. Ils ne sont plus autocorrélés (p = 0,97), et l'ARCH-LM tombe de 441 �
 **Le pic de 2022, c'est la guerre en Ukraine ?**
 En partie. L'invasion produit un pic de 46,9 % le 16 mars 2022. Mais le maximum de l'année (52,2 %) date du 24 juin 2022, lors de la chute du pétrole et des craintes de récession, quand le secteur de l'énergie perd 16,8 % en un mois (S&P Global).
 
+## R et Python (§8.1)
+
+**Pourquoi le projet existe-t-il en deux langages ?**
+Le cahier l'exige pour le socle classique (§8.1). `notebooks/classical_R.Rmd` reproduit les phases 1 à 3 avec quantmod, forecast, urca, vars et rugarch, puis compare 88 grandeurs à leur valeur Python.
+
+**Les résultats sont-ils les mêmes ?**
+Oui : 68 grandeurs identiques à moins de 0,1 %, 14 à moins de 2 %, et 6 écarts, tous expliqués. **Aucune conclusion ne change.**
+
+**D'où viennent les écarts ?**
+Uniquement de réglages par défaut différents, et à chaque fois on retrouve le résultat Python en imposant le même réglage en R :
+- échantillon utilisé pour choisir les retards de l'ADF et d'Engle-Granger ;
+- point de départ de l'optimiseur pour l'ARIMA(3,1,2) ;
+- variance initiale du GARCH ;
+- `VARselect` qui ne teste pas l'ordre 0.
+
+**Un écart vous a-t-il appris quelque chose ?**
+Oui, deux choses :
+1. **L'ARIMA(3,1,2) a une vraisemblance à plusieurs sommets.** R s'arrête sur un sommet plus bas, et son `auto.arima` choisit alors ARIMA(5,1,0). Le choix de l'AIC est donc instable, alors que celui du BIC (marche aléatoire) est le même dans les deux langages.
+2. **Le test d'Engle-Granger dépend fortement des 8 premières observations** (janvier 2016) : la cointégration est fragile.
+
 ## Usage de l'IA
 
 **Avez-vous utilisé une IA ?**
