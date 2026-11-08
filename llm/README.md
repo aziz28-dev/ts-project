@@ -6,7 +6,7 @@ Ce dossier documente l'usage critique d'un LLM, comme le demande le cahier des c
 
 | Étape | Fichier | Qui | Statut |
 | --- | --- | --- | --- |
-| 0. Interprétation personnelle, datée, écrite **avant** tout prompt | `interpretation_personnelle.md` | Étudiant | À faire |
+| 0. Interprétation personnelle, datée, écrite **avant** tout prompt | `interpretation_personnelle.md` | Étudiant | Fait (2026-11-08) |
 | 1. Hypothèses de modèles | `prompts/01_hypotheses.md` → `responses/` | Étudiant (LLM externe) | Prompt prêt |
 | 2. Vulgarisation pour un décideur | `prompts/02_vulgarisation.md` → `responses/` | Étudiant (LLM externe) | Prompt prêt |
 | 3. Recommandations simulées | `prompts/03_recommandations.md` → `responses/` | Étudiant (LLM externe) | Après la phase 6 |
