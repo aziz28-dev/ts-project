@@ -1,9 +1,9 @@
 ,RMSE h = 10 ($),écart à la baseline h = 10 (%),DM h = 10 contre la baseline,couverture IC 95 % h = 1 (%),interprétabilité,coût des prévisions sur le test (s),coût d'entraînement
-Marche aléatoire (baseline),4.6500934443961865,0.0,référence,98.01587301587301,totale : aucun paramètre de moyenne,0.0,négligeable
-"ARIMA(3,1,2)",4.656604186567998,0.14001314704026324,significativement moins bon,98.01587301587301,faible : racines AR et MA presque compensées (§3.1),12.853565692901611,13 estimations
-VAR(1),4.628204638650974,-0.4707175459364277,pas de différence significative,98.4126984126984,"bonne : coefficients, IRF, Granger",0.06051206588745117,négligeable
-VECM,4.65210634093931,0.04328722782012129,pas de différence significative,98.01587301587301,"bonne : équilibre de long terme, α, demi-vie",0.7259228229522705,négligeable
-Marche aléatoire + GJR-GARCH-t,4.6500934443961865,0.0,prévisions identiques à la baseline,94.84126984126983,"bonne : levier γ, persistance, loi de Student",4.87952995300293,13 estimations
-LSTM,4.867054983652692,4.665745793086495,significativement moins bon,,très faible (boîte noire),,grille §4 : 9 min (80 entraînements) + 3 seeds
-GRU,4.769508970773827,2.5680242301699963,significativement moins bon,,très faible (boîte noire),,grille §4 : 9 min (80 entraînements) + 3 seeds
+Marche aléatoire (baseline),4.6500934443961865,0.0,référence,98.01587301587301,totale : aucun paramètre de moyenne,0.0006101131439208984,négligeable
+"ARIMA(3,1,2)",4.656604186567998,0.14001314704026324,significativement moins bon,98.01587301587301,faible : racines AR et MA presque compensées (§3.1),15.742968559265137,13 estimations
+VAR(1),4.628204638650974,-0.4707175459364277,pas de différence significative,98.4126984126984,"bonne : coefficients, IRF, Granger",0.06074213981628418,négligeable
+VECM,4.65210634093931,0.04328722782012129,pas de différence significative,98.01587301587301,"bonne : équilibre de long terme, α, demi-vie",0.6565239429473877,négligeable
+Marche aléatoire + GJR-GARCH-t,4.6500934443961865,0.0,prévisions identiques à la baseline,94.84126984126983,"bonne : levier γ, persistance, loi de Student",5.116230487823486,13 estimations
+LSTM,4.867054983652692,4.665745793086495,significativement moins bon,,très faible (boîte noire),,grille §4 : 10 min (80 entraînements) + 3 seeds
+GRU,4.769508970773827,2.5680242301699963,significativement moins bon,,très faible (boîte noire),,grille §4 : 10 min (80 entraînements) + 3 seeds
 Hybride ARIMA+LSTM,4.865996377071171,4.642980517631701,significativement moins bon,,très faible (boîte noire),,ARIMA + 3 seeds LSTM
