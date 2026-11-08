@@ -190,6 +190,20 @@ En le recalculant en R avec `forecast::dm.test` sur exactement les mêmes erreur
 **Pourquoi la MAPE ne se calcule-t-elle pas sur les rendements ?**
 Les rendements sont souvent proches de zéro : diviser par eux fait exploser l'erreur relative. On calcule toutes les métriques sur le prix en dollars.
 
+## Extensions (§7)
+
+**Pourquoi une corrélation glissante plutôt qu'une corrélation unique ?**
+Parce que le lien change dans le temps. La corrélation XOM – XLE est passée d'environ 0,82 avant 2020 à 0,93 après, et elle monte encore pendant les crises. Une valeur unique (0,91) mélange ces régimes.
+
+**La bande de confiance est-elle exacte ?**
+Non. La transformation de Fisher suppose des rendements indépendants et de variance constante, ce qui est faux avec des effets ARCH. Elle ne donne qu'un ordre de grandeur, d'environ ±0,05 pour une corrélation de 0,9 sur 60 jours.
+
+**Le Brent aide-t-il à prévoir XOM ?**
+Non. Il **explique** les mouvements du jour : XOM monte de 0,37 % quand le Brent monte de 1 %, et le R² passe de 0,4 % à 28 %. Mais le Brent de la **veille** n'a aucun effet (p = 0,86), et le VARX ne prévoit pas mieux sur le test. Pour exploiter le Brent du jour, il faudrait le prévoir, ce qui est aussi difficile que de prévoir XOM.
+
+**Pourquoi ne pas avoir expliqué le creux de corrélation de mars 2022 ?**
+La corrélation du 1ᵉʳ mars porte sur les 60 jours précédents, alors que la seule annonce propre à XOM ce jour-là (la sortie de Sakhalin-1) a été faite après la clôture. L'attribuer à cet événement serait une causalité inventée, l'erreur que l'on reproche justement au LLM.
+
 ## Usage de l'IA
 
 **Avez-vous utilisé une IA ?**

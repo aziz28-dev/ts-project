@@ -133,6 +133,41 @@ def var(panel: pd.DataFrame, orig: np.ndarray, p: int = 1) -> dict:
     return _result(f"VAR({p})", m, lo, hi, None, time.time() - t0, len(blocks(orig)))
 
 
+def varx(panel: pd.DataFrame, orig: np.ndarray, exog: str = "BZ=F_ret") -> dict:
+    """VARX(1) : VAR(1) de XOM et XLE avec le rendement du Brent de la VEILLE en exogène (§7.2).
+
+    y_t = c + A y_{t−1} + B b_{t−1} + u_t, estimé par MCO sur les jours sans valeur manquante,
+    ré-estimé tous les 20 jours. Prévision à 1 jour : b_t est connu à l'origine. Au-delà,
+    le Brent futur est inconnu : on prend sa prévision de marche aléatoire, un rendement nul.
+    Pas d'intervalle : il faudrait aussi modéliser l'incertitude du Brent.
+    """
+    t0 = time.time()
+    L = panel["XOM_logp"].to_numpy()
+    R = panel[["XOM_ret", "XLE_ret"]].to_numpy()
+    b = panel[exog].to_numpy()
+    m = np.empty((len(orig), HORIZON))
+    coefs = []
+    for blk in blocks(orig):
+        o = orig[blk]
+        t = np.arange(2, o[0] + 1)
+        X = np.column_stack([np.ones(len(t)), R[t - 1], b[t - 1]])
+        ok = ~np.isnan(X).any(axis=1) & ~np.isnan(R[t]).any(axis=1)
+        beta = np.linalg.lstsq(X[ok], R[t][ok], rcond=None)[0]       # (4, 2) : constante, XOM, XLE, Brent
+        c, A, B = beta[0], beta[1:3].T, beta[3]
+        coefs.append(pd.Series({"Brent → XOM": B[0], "Brent → XLE": B[1]}, name=str(panel.index[o[0]].date())))
+        y = c + R[o] @ A.T + np.outer(b[o], B)
+        cum = y[:, 0].copy()
+        m[blk, 0] = L[o] + cum / 100
+        for h in range(1, HORIZON):
+            y = c + y @ A.T
+            cum += y[:, 0]
+            m[blk, h] = L[o] + cum / 100
+    out = _result("VARX(1) + Brent de la veille", m, seconds=time.time() - t0, n_fit=len(blocks(orig)),
+                  note="Brent futur = marche aléatoire au-delà de h = 1")
+    out["coefs"] = pd.DataFrame(coefs)
+    return out
+
+
 def vecm(panel: pd.DataFrame, orig: np.ndarray) -> dict:
     """VECM (r = 1, sans retard en différences, constante dans la relation), ré-estimé tous les 20 jours.
 

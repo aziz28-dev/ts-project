@@ -1,0 +1,10 @@
+,modèle,h,n,DM,p-value,repli h = 1,verdict (5 %)
+contre la marche aléatoire,VAR(1),1,252,0.018265996898574995,0.9854411647284714,False,pas de différence significative
+contre la marche aléatoire,VAR(1),5,248,-0.029835238809809716,0.9762225474175632,False,pas de différence significative
+contre la marche aléatoire,VAR(1),10,243,-0.40186374820408605,0.6881389824862163,False,pas de différence significative
+contre la marche aléatoire,VARX(1) + Brent de la veille,1,252,0.057000908968453584,0.9545898206715985,False,pas de différence significative
+contre la marche aléatoire,VARX(1) + Brent de la veille,5,248,-0.0102594714449957,0.9918225512516281,False,pas de différence significative
+contre la marche aléatoire,VARX(1) + Brent de la veille,10,243,-0.40622079948629525,0.6849393507950476,False,pas de différence significative
+contre le VAR(1),VARX(1) + Brent de la veille,1,252,1.6370272685397649,0.10287788942509575,False,pas de différence significative
+contre le VAR(1),VARX(1) + Brent de la veille,5,248,1.5070683860894698,0.13307100661569138,False,pas de différence significative
+contre le VAR(1),VARX(1) + Brent de la veille,10,243,-0.6742864747942251,0.5007727934601522,False,pas de différence significative

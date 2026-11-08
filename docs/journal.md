@@ -233,3 +233,19 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - Le VAR et le VECM servent à l'analyse du lien XOM / XLE, pas à la prévision.
 
 **Limites.** Un seul an de test, calme et haussier (+17 %) ; réseaux non ré-entraînés pendant le test ; coûts de transaction ignorés.
+
+## Phase 7 — Extensions : corrélation glissante et VARX avec le Brent (2026-11-08)
+
+**Implémentation** : `src/extensions.py`, `EV.varx` dans `src/evaluation.py` ; notebook §7. Tableaux tab44 à tab46b, figures 21 et 22. Trois événements ajoutés à `docs/sources.md` : avril 2020, invasion de l'Ukraine, sortie d'ExxonMobil de Sakhalin-1.
+
+**7.1 Corrélation glissante sur 60 jours (2016-2025)**
+- XOM – XLE : 0,82 en moyenne sur 2016-2019, 0,94 en 2020, 0,93 sur 2021-2024, 0,88 en 2025. Le changement de niveau à partir de 2020 (environ +0,11) dépasse la demi-largeur de la bande de Fisher (environ 0,05).
+- Après chacun des 6 événements sourcés, la corrélation est plus haute 60 jours plus tard (par exemple 0,88 → 0,95 après avril 2025) : les chocs communs dominent en crise.
+- XOM – Brent : corrélation statique de 0,53, fenêtres de 60 jours entre 0,25 et 0,83, renforcement depuis 2021. Creux de 0,28 le 2022-03-01, laissé sans explication : l'annonce Sakhalin-1 est postérieure à la fenêtre.
+
+**7.2 VARX(1) avec le Brent** (train, MCO par équation, HC3 ; identique à `statsmodels.VAR(exog=…)`)
+- **Brent du même jour** : coefficient 0,371 dans l'équation de XOM (p < 0,001), R² de 0,4 % à 27,9 %. Même résultat hors 2020 (0,374). XLE : 0,45, R² 36 %.
+- **Brent de la veille** : coefficient −0,005 (p = 0,86), aucun gain de R² ; hors 2020 −0,027 (p = 0,24).
+- **Test, protocole du §6** : RMSE à h = 10 de 4,628 $ pour le VARX comme pour le VAR(1). Diebold-Mariano contre la marche aléatoire : p = 0,69 ; contre le VAR(1) : p de 0,10 à 0,50.
+
+**Décision.** Le Brent est une variable explicative (contemporaine), pas prédictive. Le VARX n'est pas retenu pour la prévision. Le lien XOM – XLE varie dans le temps : un DCC-GARCH serait l'extension suivante (non réalisée).
