@@ -36,19 +36,35 @@ Le prompt a été envoyé par erreur avant la phase 6, avec les champs de donné
 | Achat si la prévision est « favorable » | La marche aléatoire prévoit le même prix chaque jour (rendement prévu nul) | Scénarios 1 et 2 : acheter si la prévision à 1 ou 5 jours indique une évolution favorable | **Erreur de raisonnement** | Avec ARIMA(0,1,0), la prévision ponctuelle ne peut jamais être « favorable » : ces scénarios ne peuvent pas se produire. Le LLM décrit le modèle correctement, mais n'en tire pas la conséquence. |
 | « Direction des prévisions » | Le GARCH prévoit l'amplitude, pas le sens (§3.3) | La décision doit tenir compte de « la direction des prévisions » et de la volatilité | **Erreur 3 de la grille** | Aucun des deux modèles ne fournit de direction. Seule l'amplitude du risque est prévisible. |
 
+## Prompt 3 — Recommandations avec les résultats de la phase 6
+
+| Thème | Notre interprétation | LLM | Verdict | Justification |
+| --- | --- | --- | --- | --- |
+| Chiffres cités | Valeurs des tableaux tab36 à tab39 | Tous les chiffres cités figurent dans le prompt | **Bon comportement** | Aucune p-value ni statistique inventée (erreur 1 de la grille évitée). |
+| Lecture des tests | Diebold-Mariano : aucun modèle meilleur que la marche aléatoire ; variance : p = 0,075, non significatif à 5 % | Mêmes conclusions, y compris « pas statistiquement significative au seuil de 5 % » pour p = 0,075 | **Convergence** | Le LLM ne surinterprète pas le meilleur QLIKE du GARCH, qui n'est significatif qu'à 10 %. |
+| Direction du prix | Le GARCH prévoit l'amplitude, pas le sens (§3.3) | « Le modèle estime la volatilité, mais ne prédit pas **avec certitude** la direction du cours » | **Erreur 3 de la grille** | « Avec certitude » laisse croire que le GARCH prédit un peu la direction. Il ne la prédit pas du tout. |
+| Recommandation HOLD | La marche aléatoire ne donne aucun signal, ni pour vendre, ni pour garder | « Conserver l'action », car il n'y a « pas de signal statistique significatif de vente » | **Raisonnement non fondé** | L'absence de signal ne favorise aucune décision : garder l'action est aussi un pari. Le choix dépend du risque que l'investisseur accepte. La recommandation cohérente avec nos résultats serait de dimensionner la position avec la volatilité prévue par le GARCH. |
+| Vocabulaire | Intervalle de **prévision** à 95 % (sur un prix futur) | « Intervalle de **confiance** à 95 % » | **Vocabulaire statistique** | Un intervalle de confiance porte sur un paramètre, un intervalle de prévision sur une valeur future. |
+
 ## Bilan
 
 | Verdict | Nombre |
 | --- | --- |
-| Convergences | 2 |
+| Convergences et bons comportements | 5 |
 | Divergence | 1 |
 | Oublis du LLM | 2 |
 | Simplification, imprécision ou ajout non fondé | 3 |
-| Vocabulaire causal | 1 |
+| Erreurs de raisonnement | 2 |
+| GARCH présenté comme prévoyant la direction (erreur 3) | 2 |
+| Vocabulaire causal ou statistique | 2 |
 
-Sur les **faits principaux**, le LLM converge avec notre interprétation : marche aléatoire pour la moyenne, GARCH avec loi de Student et effet de levier pour la variance, aucun avantage des réseaux de neurones. Il n'invente aucune p-value. Ses erreurs sont plus subtiles :
+**Ce que le LLM fait bien.** Sur les **faits principaux**, il converge avec notre interprétation : marche aléatoire pour la moyenne, GARCH avec loi de Student et effet de levier pour la variance, aucun avantage des réseaux de neurones. Il n'invente aucune p-value, signale l'absence de données (essai 03a) et lit correctement les tests quand on les lui fournit.
+
+**Ses erreurs sont plus subtiles :**
 - il **oublie** les résultats qui nuancent, comme la cointégration ou la dépendance de la FEVD à l'ordre ;
 - il **simplifie** la persistance de la volatilité ;
-- il **ajoute** des explications qu'on ne lui a pas fournies.
+- il **ajoute** des explications qu'on ne lui a pas fournies ;
+- il **attribue au GARCH une capacité à prévoir la direction**, même atténuée (« avec certitude ») ;
+- il **tire des recommandations que les résultats ne justifient pas** : achat si la prévision est « favorable », alors qu'une marche aléatoire est toujours plate ; HOLD faute de signal de vente.
 
-Un décideur qui lirait sa réponse seule aurait une image trop simple de la volatilité et du lien entre XOM et XLE.
+**Conclusion.** Le LLM est un bon outil de reformulation quand on lui donne des résultats vérifiés. En revanche, il ne contrôle pas la cohérence entre le modèle et la décision qu'il en tire. Un décideur qui lirait ses réponses seules aurait une image trop simple de la volatilité et du lien entre XOM et XLE, et pourrait croire que nos modèles justifient une décision d'investissement.
