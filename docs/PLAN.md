@@ -290,7 +290,7 @@ Compte environ trois semaines à temps partiel, en sécurisant d'abord le bloc A
 - [ ] Limites et échecs rapportés (SARIMA écarté, baseline difficile à battre, cointégration)
 - [ ] Notebooks exécutés de bout en bout sur un environnement neuf
 - [ ] Rapport entre 15 et 25 pages hors annexes
-- [ ] Date limite confirmée avec M. Dhouibi
+- [ ] Date limite confirmée avec M. Dhouibi (au 2026-11-08 : pas encore fixée par l'enseignant ; celle du cahier, 12 octobre 2026, ne s'applique pas)
 
 **Questions probables en soutenance :**
 
