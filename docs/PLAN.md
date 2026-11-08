@@ -71,7 +71,7 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 3.2 | Johansen / Engle-Granger, VECM si cointégration | Sur log-prix | Terme α interprété | Fait en Python et en R |
 | 3.3 | GARCH(1,1) + ordres supérieurs, résidus standardisés | `arch` / `rugarch`, loi t de Student | Graphe volatilité + événements | Fait en Python et en R |
 | 4.1 | LSTM + GRU, hyperparamètres justifiés, walk-forward | Keras, fenêtres glissantes | Courbes de perte, scores par fold | Fait (Python) : grille de 16 configurations en walk-forward 5 folds, 3 seeds, hybride ARIMA + LSTM ; aucun ne bat la marche aléatoire |
-| 5 | 4 tâches LLM documentées, erreurs du LLM signalées | Prompts + réponses intégrales | Annexe LLM | À faire |
+| 5 | 4 tâches LLM documentées, erreurs du LLM signalées | Prompts + réponses intégrales | Annexe LLM | En cours : prompts 1 et 2 prêts (`llm/prompts/`), prompt 3 après la phase 6 ; interprétation personnelle et envoi au LLM par l'étudiant |
 | 6 | h = 5–10, IC, tableau unique MSE/RMSE/MAE/MAPE, Diebold-Mariano | Prévision multi-origines sur le test | Tableau récapitulatif + matrice DM | À faire |
 | 8.1 | Socle classique en R ET Python, code commenté « pourquoi » | `.Rmd` + `.ipynb` | Deux notebooks | Fait : `classical_R.Rmd` reproduit les phases 1 à 3, comparaison R/Python (91 grandeurs) ; commentaires « pourquoi » |
 | 8.3 | Notebook reproductible de bout en bout | Seed, versions, pas de chemin local | Exécution sur env. vierge | À faire |
