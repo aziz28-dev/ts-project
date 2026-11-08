@@ -7,10 +7,10 @@ Ce dossier documente l'usage critique d'un LLM, comme le demande le cahier des c
 | Étape | Fichier | Qui | Statut |
 | --- | --- | --- | --- |
 | 0. Interprétation personnelle, datée, écrite **avant** tout prompt | `interpretation_personnelle.md` | Étudiant | Fait (2026-11-08) |
-| 1. Hypothèses de modèles | `prompts/01_hypotheses.md` → `responses/` | Étudiant (LLM externe) | Prompt prêt |
-| 2. Vulgarisation pour un décideur | `prompts/02_vulgarisation.md` → `responses/` | Étudiant (LLM externe) | Prompt prêt |
+| 1. Hypothèses de modèles | `prompts/01_hypotheses.md` → `responses/` | Étudiant (LLM externe) | Fait (ChatGPT, GPT-6) |
+| 2. Vulgarisation pour un décideur | `prompts/02_vulgarisation.md` → `responses/` | Étudiant (LLM externe) | Fait (ChatGPT, GPT-6) |
 | 3. Recommandations simulées | `prompts/03_recommandations.md` → `responses/` | Étudiant (LLM externe) | Après la phase 6 |
-| 4. Comparaison humain / LLM et erreurs du LLM | `comparaison.md` | Étudiant | À faire après les réponses |
+| 4. Comparaison humain / LLM et erreurs du LLM | `comparaison.md` | Étudiant | Fait pour les prompts 1 et 2 |
 
 ## Règles
 
