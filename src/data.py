@@ -49,7 +49,8 @@ def download_ticker(ticker: str, refresh: bool = False) -> pd.DataFrame:
     df = df[RAW_COLUMNS]
     df.index = pd.DatetimeIndex(df.index).tz_localize(None).normalize()
     df.index.name = "Date"
-    df.to_csv(cache)
+    # Fins de ligne LF : sous Windows pandas écrit CRLF, d'où de faux « modifié » dans git.
+    df.to_csv(cache, lineterminator="\n")
     return df
 
 
@@ -178,7 +179,6 @@ def prepare(refresh: bool = False, save: bool = True):
     train, test = train_test_split_time(panel)
     if save:
         out = path("processed")
-        panel.to_csv(out / "panel.csv")
-        train.to_csv(out / "train.csv")
-        test.to_csv(out / "test.csv")
+        for name, df in {"panel": panel, "train": train, "test": test}.items():
+            df.to_csv(out / f"{name}.csv", lineterminator="\n")
     return raw, panel, train, test

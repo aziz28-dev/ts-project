@@ -58,7 +58,9 @@ def save_fig(fig, number: int, name: str, dpi: int = 150) -> Path:
 def save_table(df, name: str, index: bool = True) -> Path:
     """Sauvegarde un tableau du rapport en CSV pour le réutiliser sans recalcul."""
     out = path("tables") / f"{name}.csv"
-    df.to_csv(out, index=index, encoding="utf-8")
+    # Fins de ligne LF forcées : sous Windows pandas écrit CRLF, ce qui marque le
+    # fichier comme modifié dans git à chaque exécution alors que le contenu est identique.
+    df.to_csv(out, index=index, encoding="utf-8", lineterminator="\n")
     return out
 
 
