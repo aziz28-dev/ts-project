@@ -415,9 +415,11 @@ Comme le rappelle le cahier, un modèle simple et bien diagnostiqué vaut mieux 
 
 | Étape | Commande |
 | ---------------- | ---------------------------------------- |
-| Environnement Python (3.11) | `pip install -r requirements.txt` (versions exactes : `requirements-lock.txt`) |
-| Environnement R (≥ 4.3) | `Rscript install_packages.R` (snapshot CRAN daté) |
-| Étude complète Python (≈ 14 min) | `jupyter nbconvert --to notebook --execute notebooks/main_python.ipynb` |
+| Installation complète (Python 3.11 et R ≥ 4.3) | `python install.py` : environnement Python placé automatiquement dans un dossier court si le chemin du projet dépasse la limite Windows de 260 caractères, puis packages R |
+| Exécution des deux notebooks | `python run_all.py` (notebook Python ≈ 13 min, puis Rmd ≈ 1 min 30 s) |
+| Environnement Python, à la main | `pip install -r requirements.txt` (versions exactes : `requirements-lock.txt`) |
+| Environnement R, à la main | `Rscript install_packages.R` (snapshot CRAN daté) |
+| Étude complète Python, à la main | `jupyter nbconvert --to notebook --execute notebooks/main_python.ipynb` |
 | Socle classique en R | `Rscript -e "rmarkdown::render('notebooks/classical_R.Rmd')"` (après le notebook Python, dont il relit les exports) |
 | Rapport Word | `python rapport/build_rapport.py` |
 

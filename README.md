@@ -11,7 +11,7 @@ Modèles : ARIMA/SARIMA, VAR, cointégration/VECM, GARCH (en Python **et** en R)
 - Python **3.11** (les versions de `requirements.txt` sont figées pour 3.11)
 - R **≥ 4.3** (testé avec R 4.6.2 ; les binaires Windows du snapshot CRAN évitent Rtools)
 - Windows : **Microsoft Visual C++ Redistributable** (requis par TensorFlow)
-- Windows : **chemin court pour le projet**, par exemple `C:\Users\<nom>\ts-project`. TensorFlow installe des fichiers dont le chemin complet dépasse 260 caractères si l'environnement virtuel est dans un dossier profond, et l'installation échoue alors (`OSError: No such file or directory … tensorflow\include\…`). Autre solution : activer les chemins longs de Windows (https://pip.pypa.io/warnings/enable-long-paths, droits administrateur requis).
+- Windows : le projet peut être placé **n'importe où**. TensorFlow installe un fichier dont le chemin, relatif à l'environnement Python, fait 161 caractères. Si le projet est dans un dossier profond, `.venv` dépasserait la limite Windows de 260 caractères et pip échouerait (`OSError: No such file or directory … tensorflow\include\…`). `install.py` le détecte et crée alors l'environnement dans un dossier court (`%USERPROFILE%\.venvs\ts-project`).
 - **Pandoc** (requis par `rmarkdown` pour produire `classical_R.html` ; inclus dans RStudio, sinon `winget install JohnMacFarlane.Pandoc`)
 - Connexion internet au premier lancement. Les données sont ensuite relues depuis le cache `data/raw/`.
 
@@ -25,7 +25,20 @@ winget install Python.Python.3.11 RProject.R Microsoft.VCRedist.2015+.x64 Git.Gi
 
 `requirements.txt` fige les dépendances directes ; `requirements-lock.txt` contient l'environnement exact vérifié (toutes les dépendances transitives).
 
-## Installation
+## Installation et exécution (recommandé)
+
+Depuis la racine du projet, avec Python 3.11 :
+
+```powershell
+python install.py      # environnement Python (emplacement choisi automatiquement) + packages R
+python run_all.py      # exécute main_python.ipynb puis rend classical_R.Rmd
+```
+
+`install.py` vérifie aussi l'installation (`pip check`, versions affichées) et écrit l'emplacement de l'environnement dans `.venv-path`, que `run_all.py` relit.
+
+## Installation manuelle
+
+Si le chemin du projet est court (ou si les chemins longs de Windows sont activés) :
 
 ```powershell
 # Python
@@ -38,10 +51,10 @@ python -m src.utils                 # contrôle : racine, config, seed, versions
 Rscript install_packages.R          # installe et affiche les versions
 ```
 
-## Ordre d'exécution
+Ordre d'exécution :
 
-1. `notebooks/main_python.ipynb` : étude complète de bout en bout (données → EDA → modèles → évaluation).
-2. `notebooks/classical_R.Rmd` : socle classique (section 3) en R.
+1. `notebooks/main_python.ipynb` : étude complète de bout en bout (données → EDA → modèles → évaluation → extensions).
+2. `notebooks/classical_R.Rmd` : socle classique (section 3) en R, et vérifications R de Diebold-Mariano et du DCC. Il relit les tableaux exportés par le notebook Python : l'exécuter en second.
 
 ```powershell
 jupyter nbconvert --to notebook --execute --inplace notebooks/main_python.ipynb

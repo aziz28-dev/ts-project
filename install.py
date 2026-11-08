@@ -90,7 +90,13 @@ def main() -> None:
         run([sys.executable, "-m", "venv", venv_dir])
     py = venv_python(venv_dir)
     run([py, "-m", "pip", "install", "--upgrade", "pip"])
-    run([py, "-m", "pip", "install", "-r", ROOT / "requirements.txt"])
+    try:
+        run([py, "-m", "pip", "install", "-r", ROOT / "requirements.txt"])
+    except subprocess.CalledProcessError:
+        # Cause fréquente : un fichier corrompu dans le cache de pip après une coupure réseau
+        # (« THESE PACKAGES DO NOT MATCH THE HASHES »). On retélécharge tout, sans le cache.
+        print("Échec de pip : nouvel essai sans le cache (téléchargement complet).")
+        run([py, "-m", "pip", "install", "--no-cache-dir", "-r", ROOT / "requirements.txt"])
     run([py, "-m", "pip", "check"])
     (ROOT / ".venv-path").write_text(str(venv_dir), encoding="utf-8")
     run([py, "-m", "src.utils"])
