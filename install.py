@@ -63,7 +63,7 @@ def venv_python(venv_dir: Path) -> Path:
 
 
 def run(cmd: list) -> None:
-    print("→", " ".join(str(c) for c in cmd), flush=True)
+    print(">", " ".join(str(c) for c in cmd), flush=True)
     subprocess.run([str(c) for c in cmd], check=True)
 
 
@@ -107,5 +107,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Console Windows (cp1252) : un caractère non affichable ne doit pas interrompre l'installation.
+    sys.stdout.reconfigure(errors="replace")
     os.chdir(ROOT)
     main()

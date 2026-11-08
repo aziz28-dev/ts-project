@@ -53,5 +53,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Console Windows (cp1252) : un caractère non affichable ne doit pas interrompre l'installation.
+    sys.stdout.reconfigure(errors="replace")
     os.chdir(ROOT)
     main()
