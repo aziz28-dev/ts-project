@@ -1,0 +1,5 @@
+série,spécification,statistique,valeur critique 5 %,p-value,retards,date de rupture estimée,H0 rejetée (5 %)
+XOM log-prix,rupture de niveau,-3.79402662662492,-4.81067,0.48314622894761206,18,2021-12-20,False
+XOM log-prix,rupture de niveau et de pente,-4.208050750990785,-5.07332,0.36881090972627484,18,2020-01-06,False
+XLE log-prix,rupture de niveau,-3.97252778037054,-4.81067,0.3684562202723442,7,2021-12-20,False
+XLE log-prix,rupture de niveau et de pente,-4.567983135959719,-5.07332,0.1838785216844975,7,2020-01-07,False

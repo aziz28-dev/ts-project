@@ -37,3 +37,27 @@ Résultats, décisions et justifications, phase par phase. Sert de base à la r�
 
 **À faire plus tard**
 - R (phase 3d) : `quantmod::getSymbols(to = "2026-01-01")`, car `to` exclut la date de fin. Le plus simple est de relire les CSV de `data/raw/` pour garantir le même échantillon qu'en Python.
+
+## Phase 2 — Analyse exploratoire (2026-11-08)
+
+**Implémentation** : `src/eda.py` ; `notebooks/main_python.ipynb` §2. Figures 2 à 8, tableaux tab04 à tab10, indicatrices `data/processed/outliers.csv`.
+
+**Décisions et justifications**
+- Tests et outils d'identification (stats, ACF/PACF, STL, ADF/KPSS) calculés sur le **train uniquement** (pas de fuite) ; graphiques descriptifs sur toute la période.
+- Outliers : IQR glissant sur les 63 jours **précédents** (shift(1)), k = 3 (k = 1,5 signalerait des centaines de jours avec ces queues épaisses). Détection sur toute la période pour que l'indicatrice existe aussi sur le test. **Conservés** (chocs réels, communs aux deux actifs, objet même du GARCH) + indicatrices sauvegardées.
+- KPSS : p-value bornée à [0,01 ; 0,10] par statsmodels, affichée « < 0,01 » / « > 0,10 » ; décision sur statistique vs valeur critique.
+- Ajouts de rigueur, non prévus au plan : Ljung-Box robuste (rendements standardisés par la vol. passée, et hors 2020) ; effet jour de la semaine (Kruskal-Wallis, Levene) ; force STL (Wang-Smith-Hyndman) ; Zivot-Andrews (rupture structurelle).
+
+**Résultats (train, 2 261 rendements)**
+- Rendement moyen 0,032 %/jour (≈ 8 %/an), non significatif (t ≈ 0,85 XOM, 0,78 XLE). Volatilité annualisée 28,3 % (XOM), 30,5 % (XLE).
+- Skewness −0,16 (XOM), −0,89 (XLE) ; excès de kurtosis 6,6 et 16,4 ; Jarque-Bera 4 142 et 25 747, p < 0,0001 : normalité rejetée → GARCH avec loi de Student.
+- ACF log-prix : ACF(1) = 0,998, ACF(21) = 0,959, 40/40 retards significatifs ; PACF : un seul pic au retard 1 → marche aléatoire.
+- ACF rendements : |ACF| ≤ 0,064 (XOM), 0,129 au retard 7 (XLE). Ljung-Box rejette (Q(10) p = 0,0001 XOM) **mais** le rejet disparaît sur rendements standardisés (p = 0,98) et hors 2020 (p = 0,44) : artefact d'hétéroscédasticité, bruit blanc en moyenne.
+- ACF rendements² : 40/40 retards significatifs (XOM), max 0,32 ; Ljung-Box Q(10) = 1 464 → effets ARCH forts et persistants.
+- STL : force de saisonnalité F_S = 0,000 / 0,032 / 0,000 (périodes 5 / 21 / 252, XOM). Pas d'effet jour de la semaine en moyenne (Kruskal-Wallis p = 0,59 XOM, 0,78 XLE) ; variance du lundi un peu plus forte pour XLE (Levene p = 0,035).
+- Outliers : 15 (XOM) et 18 (XLE), dont 10 chacun en 2020, 11 jours communs ; test : 2 (XOM) et 4 (XLE), tous du 3 au 10 avril 2025. Limite : bornes trop larges après mars 2020 (baisse de −9,2 % du 2020-06-11 non signalée).
+- ADF/KPSS : log-prix non stationnaires (ADF p ≥ 0,53 ; KPSS p < 0,01, constante et constante + tendance) ; rendements stationnaires (ADF p < 0,0001 ; KPSS p > 0,10). Zivot-Andrews : racine unitaire non rejetée même avec rupture (p de 0,18 à 0,48 ; ruptures estimées janvier 2020 et décembre 2021).
+
+**Conclusion : d = 1, D = 0** pour les log-prix de XOM et de XLE (I(1)) ; rendements I(0).
+
+**Pour la phase 3** : ARIMA(0,1,0) comme référence, constante probablement non significative ; SARIMA s = 5 à estimer puis écarter ; VAR sur rendements ; cointégration testable (deux séries I(1)) ; GARCH-t.

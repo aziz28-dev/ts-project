@@ -1,0 +1,9 @@
+série,spécification,ADF stat,ADF VC 5 %,ADF retards,ADF p,ADF rejette H0,KPSS stat,KPSS VC 5 %,KPSS retards,KPSS p,KPSS rejette H0,conclusion
+XOM log-prix,constante,-0.9714242018377,-2.862829431836401,18,0.7635,False,3.5632164248918383,0.463,29,< 0.01,True,non stationnaire : différencier
+XOM log-prix,constante + tendance,-1.5995205728618647,-3.4124491785786932,18,0.7926,False,1.3972474548737912,0.146,29,< 0.01,True,non stationnaire : différencier
+XOM rendement,constante,-10.556597006528486,-2.862829431836401,17,0.0000,True,0.1438736820416615,0.463,8,> 0.10,False,stationnaire
+XOM rendement,constante + tendance,-10.568396376258196,-3.4124491785786932,17,0.0000,True,0.08452552874084081,0.146,8,> 0.10,False,stationnaire
+XLE log-prix,constante,-1.5032577055116623,-2.862823135013053,7,0.5319,False,3.5857643461039737,0.463,29,< 0.01,True,non stationnaire : différencier
+XLE log-prix,constante + tendance,-1.9725698630172714,-3.4124396086087385,7,0.6163,False,1.2637086050896518,0.146,29,< 0.01,True,non stationnaire : différencier
+XLE rendement,constante,-16.06380440049256,-2.862823135013053,6,0.0000,True,0.08398256027883079,0.463,9,> 0.10,False,stationnaire
+XLE rendement,constante + tendance,-16.059993684245626,-3.4124396086087385,6,0.0000,True,0.06069513001755058,0.146,9,> 0.10,False,stationnaire

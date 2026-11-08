@@ -61,10 +61,10 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 1.3 | Objet série temporelle natif, fréquence déclarée | `DatetimeIndex` jours ouvrés (Python), `xts` (R) | Code + `df.info()` | Fait en Python ; R en phase 3d |
 | 1.3 | Split chronologique 90/10 | Coupure à la date du 90e centile | Graphique train/test | Fait en Python ; R en phase 3d |
 | 1.3 | Source, période, ajustements documentés | Note sur Adjusted Close (dividendes, splits) | Section Données | Fait en Python ; R en phase 3d |
-| 2 | Visualisation, ACF/PACF brute et différenciée interprétées | Graphes + texte d'interprétation | Figures EDA | À faire |
-| 2 | Décomposition commentée | STL sur log-prix | Figure STL + commentaire | À faire |
-| 2 | Valeurs aberrantes détectées et traitées | IQR glissant sur rendements, indicatrice | Tableau des outliers | À faire |
-| 2 | ADF + KPSS, ordre d conclu | Sur niveaux et différences | Tableau des tests | À faire |
+| 2 | Visualisation, ACF/PACF brute et différenciée interprétées | Graphes + texte d'interprétation | Figures EDA | Fait en Python ; R en phase 3d |
+| 2 | Décomposition commentée | STL sur log-prix | Figure STL + commentaire | Fait en Python ; R en phase 3d |
+| 2 | Valeurs aberrantes détectées et traitées | IQR glissant sur rendements, indicatrice | Tableau des outliers | Fait en Python ; R en phase 3d |
+| 2 | ADF + KPSS, ordre d conclu | Sur niveaux et différences | Tableau des tests | Fait en Python ; R en phase 3d |
 | 3.1 | Ordres par ACF/PACF vs auto.arima/pmdarima | Deux approches comparées | Tableau AIC/BIC | À faire |
 | 3.1 | Ljung-Box, normalité, ARCH-LM sur résidus | Pour chaque modèle | Tableau diagnostics | À faire |
 | 3.2 | VAR (ordre par AIC/BIC) + Granger | VAR sur rendements XOM/XLE | Sorties + interprétation | À faire |
