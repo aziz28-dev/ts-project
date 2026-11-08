@@ -69,3 +69,23 @@ Ajoutés après relecture critique, pour anticiper deux objections probables :
 - **Sensibilité des outliers** (`eda.outlier_sensitivity`, tab08b et tab08c) : 16 réglages (fenêtre 21/63/126/252 × k 2/2,5/3/3,5). Le nombre de jours varie de 11 à 66 selon le réglage, mais un noyau de 11 jours (XOM) et 14 (XLE), signalés par au moins 12 réglages sur 16, est entièrement retrouvé par le réglage de référence. 4 jours limites par actif. Impact limité : les outliers sont conservés, seule l'indicatrice dépend du réglage.
 
 Reste à faire par l'étudiant : sourcer dans le rapport les événements associés aux chocs (2020-03-09, 2020-11-09, avril 2025).
+
+## Phase 3.1 — ARIMA / SARIMA (2026-11-08)
+
+**Implémentation** : `src/classical.py` (estimation, comparaison, robustesse des critères, racines, auto_arima, diagnostics) ; notebook §3.1. Tableaux tab11 à tab16, figures 9 et 10.
+
+**Décisions de méthode**
+- ARIMA(p,1,q) du log-prix estimé comme ARMA(p,q) sur r_t = 100 × Δ ln P_t : la constante est la dérive, tous les modèles ont les mêmes n = 2 261 observations (AIC/BIC comparables). Première tentative avec `trend="t"` sur le niveau abandonnée : dérive croissante dans le temps, mauvaise spécification.
+- d = 1 imposé (§2.7) ; vérifié par `pmdarima.ndiffs` (ADF, KPSS, PP → 1) et `nsdiffs` (OCSB, CH → 0).
+- Erreurs-types robustes (sandwich QMLE) à cause des effets ARCH.
+- `auto_arima` exhaustif (stepwise=False, p, q ≤ 5), avec AIC puis avec BIC.
+
+**Résultats**
+- Manuel : ARIMA(0,1,0) meilleur AIC (9 037,10) et BIC (9 042,83) ; AR(1) −0,024 (p = 0,49), MA(1) −0,023 (p = 0,50), dérive 0,032 (p = 0,40) non significatifs. ARIMA(1,1,1) : coefficients AR/MA quasi opposés.
+- auto_arima AIC → ARIMA(3,1,2) (AIC 9 021,27, soit −15,8 ; BIC +12,8) ; BIC → ARIMA(0,1,0). Minimum AIC isolé dans la grille.
+- ARIMA(3,1,2) : racines AR (module 1,047) et MA (module 1,075) quasi identiques, cycle de 2,36 jours → quasi-annulation, modèle quasi non identifié.
+- Robustesse : ΔAIC de (3,1,2) −15,8 → −7,8 hors 2020 → +9,2 sur rendements standardisés. SARIMA(1,0,0)[5] −5,7 → +1,7 → +1,9.
+- SARIMA s = 5 : AIC −5,7 et LR p = 0,006 en faveur, mais coefficient non significatif en robuste (0,058, p = 0,12), ΔBIC = 0,05, gain disparu hors 2020. Seuls 82 % des couples (t, t−5) sont le même jour de semaine. **Écarté** — résultat plus nuancé que prévu par le plan, rapporté tel quel.
+- Diagnostics : ARIMA(0,1,0) → LB brut rejette, LB standardisé non (p = 0,98) ; JB = 4 142 ; ARCH-LM(5) = 441 (p < 0,0001). ARIMA(3,1,2) → LB standardisé rejette (p = 0,013), JB = 3 376, ARCH-LM(5) = 383.
+
+**Décision** : ARIMA(0,1,0) sans dérive (marche aléatoire) retenu ; ARIMA(3,1,2) conservé comme concurrent pour l'évaluation hors échantillon (§6, Diebold-Mariano). Effets ARCH et queues épaisses → §3.3 (GARCH-t).

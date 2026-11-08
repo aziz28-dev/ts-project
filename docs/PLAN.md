@@ -65,8 +65,8 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 2 | Décomposition commentée | STL sur log-prix | Figure STL + commentaire | Fait en Python ; R en phase 3d |
 | 2 | Valeurs aberrantes détectées et traitées | IQR glissant sur rendements, indicatrice | Tableau des outliers | Fait en Python ; R en phase 3d |
 | 2 | ADF + KPSS, ordre d conclu | Sur niveaux et différences | Tableau des tests | Fait en Python ; R en phase 3d |
-| 3.1 | Ordres par ACF/PACF vs auto.arima/pmdarima | Deux approches comparées | Tableau AIC/BIC | À faire |
-| 3.1 | Ljung-Box, normalité, ARCH-LM sur résidus | Pour chaque modèle | Tableau diagnostics | À faire |
+| 3.1 | Ordres par ACF/PACF vs auto.arima/pmdarima | Deux approches comparées | Tableau AIC/BIC | Fait en Python ; R en phase 3d |
+| 3.1 | Ljung-Box, normalité, ARCH-LM sur résidus | Pour chaque modèle | Tableau diagnostics | Fait en Python ; R en phase 3d |
 | 3.2 | VAR (ordre par AIC/BIC) + Granger | VAR sur rendements XOM/XLE | Sorties + interprétation | À faire |
 | 3.2 | Johansen / Engle-Granger, VECM si cointégration | Sur log-prix | Terme α interprété | À faire |
 | 3.3 | GARCH(1,1) + ordres supérieurs, résidus standardisés | `arch` / `rugarch`, loi t de Student | Graphe volatilité + événements | À faire |
