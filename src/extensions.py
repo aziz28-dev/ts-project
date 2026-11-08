@@ -122,3 +122,107 @@ def varx_analysis(panel: pd.DataFrame, sample: dict) -> pd.DataFrame:
             t.insert(0, "échantillon", name)
             out.append(t)
     return pd.concat(out)
+
+
+# ---------------------------------------------------------------------------
+# 7.3 DCC-GARCH : corrélation conditionnelle dynamique (Engle, 2002)
+# ---------------------------------------------------------------------------
+
+def dcc_standardized(panel: pd.DataFrame, fit_end: pd.Timestamp, cols=("XOM_ret", "XLE_ret")):
+    """Étape 1 : un GJR(1,1)-t de moyenne nulle par actif (spécification du §3.3), estimé sur le train.
+
+    Les paramètres sont ensuite fixés et la variance filtrée sur tout l'échantillon : les
+    résidus standardisés z_t = r_t / σ_t du test n'utilisent aucun paramètre estimé sur le test.
+    Renvoie les résidus standardisés (DataFrame) et les résultats univariés.
+    """
+    from arch.univariate import GARCH, StudentsT, ZeroMean
+
+    from src.classical import fit_garch
+
+    r = panel[list(cols)].iloc[1:]
+    Z, fits = {}, {}
+    for c in cols:
+        res = fit_garch(r.loc[:fit_end, c], o=1, dist="t")
+        full = ZeroMean(r[c].to_numpy(), volatility=GARCH(1, 1, 1), distribution=StudentsT(), rescale=False).fix(res.params)
+        Z[c] = r[c].to_numpy() / full.conditional_volatility
+        fits[c] = res
+    return pd.DataFrame(Z, index=r.index), fits
+
+
+def _dcc_path(Z: np.ndarray, a: float, b: float, Qbar: np.ndarray):
+    """Récurrence Q_t = (1 − a − b) Q̄ + a z_{t−1} z_{t−1}' + b Q_{t−1}, puis R_t = Q_t normalisée."""
+    T, k = Z.shape
+    Q = Qbar.copy()
+    R = np.empty((T, k, k))
+    for t in range(T):
+        if t > 0:
+            Q = (1 - a - b) * Qbar + a * np.outer(Z[t - 1], Z[t - 1]) + b * Q
+        d = np.sqrt(np.diag(Q))
+        R[t] = Q / np.outer(d, d)
+    return R
+
+
+def dcc_loglik(params, Z: np.ndarray, Qbar: np.ndarray) -> float:
+    """Partie « corrélation » de la quasi-vraisemblance gaussienne : −½ Σ (ln|R_t| + z_t' R_t⁻¹ z_t − z_t' z_t)."""
+    a, b = params
+    R = _dcc_path(Z, a, b, Qbar)
+    det = R[:, 0, 0] * R[:, 1, 1] - R[:, 0, 1] ** 2            # k = 2 : formule fermée, plus rapide
+    inv_quad = (R[:, 1, 1] * Z[:, 0] ** 2 - 2 * R[:, 0, 1] * Z[:, 0] * Z[:, 1] + R[:, 0, 0] * Z[:, 1] ** 2) / det
+    return float(-0.5 * np.sum(np.log(det) + inv_quad - np.sum(Z ** 2, axis=1)))
+
+
+def dcc_fit(Z: np.ndarray) -> dict:
+    """Étape 2 : estimation de (a, b) par maximum de la quasi-vraisemblance, sous a, b ≥ 0 et a + b < 1.
+
+    Q̄ = moyenne des z_t z_t' (« correlation targeting »), comme rmgarch. Les erreurs-types
+    viennent du hessien numérique de cette seule étape : elles ignorent l'incertitude de
+    l'étape 1 et sont donc un peu trop petites (approximation usuelle).
+    """
+    from scipy.optimize import minimize
+
+    Qbar = Z.T @ Z / len(Z)
+    obj = lambda p: -dcc_loglik(p, Z, Qbar)
+    cons = {"type": "ineq", "fun": lambda p: 0.9999 - p[0] - p[1]}
+    best = min((minimize(obj, x0, method="SLSQP", bounds=[(0, 1), (0, 1)], constraints=cons)
+                for x0 in ([0.02, 0.95], [0.05, 0.90], [0.10, 0.80])), key=lambda r: r.fun)
+    a, b = best.x
+    # Hessien numérique (différences centrées) de −log-vraisemblance.
+    h, H = 1e-4, np.zeros((2, 2))
+    for i in range(2):
+        for j in range(2):
+            ei, ej = np.eye(2)[i] * h, np.eye(2)[j] * h
+            H[i, j] = (obj(best.x + ei + ej) - obj(best.x + ei - ej) - obj(best.x - ei + ej) + obj(best.x - ei - ej)) / (4 * h * h)
+    try:
+        se = np.sqrt(np.diag(np.linalg.inv(H)))
+    except np.linalg.LinAlgError:
+        se = np.array([np.nan, np.nan])
+    ll_dcc = -best.fun
+    ll_ccc = dcc_loglik([0.0, 0.0], Z, Qbar)
+    return {"a": a, "b": b, "se_a": se[0], "se_b": se[1], "Qbar": Qbar, "loglik_dcc": ll_dcc, "loglik_ccc": ll_ccc,
+            "converged": bool(best.success)}
+
+
+def dcc_correlation(Z: pd.DataFrame, fit: dict) -> pd.Series:
+    """Corrélation conditionnelle ρ_t filtrée sur tout l'échantillon avec les paramètres du train."""
+    R = _dcc_path(Z.to_numpy(), fit["a"], fit["b"], fit["Qbar"])
+    return pd.Series(R[:, 0, 1], index=Z.index, name="corrélation DCC")
+
+
+def engle_sheppard(Z: np.ndarray, lags: int = 5) -> dict:
+    """Test d'Engle et Sheppard (2001), H₀ : corrélation constante (CCC).
+
+    On « blanchit » les résidus standardisés par la corrélation constante, ŝ_t = R̄^(−1/2) z_t.
+    Sous H₀, Y_t = ŝ_1t ŝ_2t (partie hors diagonale de ŝ_t ŝ_t' − I) n'est pas prévisible.
+    On régresse Y_t sur une constante et ses `lags` retards : la statistique δ'X'Xδ / σ̂²
+    suit un χ² à lags + 1 degrés de liberté.
+    """
+    Rbar = np.corrcoef(Z.T)
+    w, V = np.linalg.eigh(Rbar)
+    S = Z @ (V @ np.diag(w ** -0.5) @ V.T)
+    Y = S[:, 0] * S[:, 1]
+    X = np.column_stack([np.ones(len(Y) - lags)] + [Y[lags - k:len(Y) - k] for k in range(1, lags + 1)])
+    y = Y[lags:]
+    delta = np.linalg.lstsq(X, y, rcond=None)[0]
+    s2 = np.mean((y - X @ delta) ** 2)
+    stat = float(delta @ X.T @ X @ delta / s2)
+    return {"statistique": stat, "ddl": lags + 1, "p-value": float(stats.chi2.sf(stat, lags + 1))}

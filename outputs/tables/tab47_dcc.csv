@@ -1,0 +1,7 @@
+,valeur,erreur-type (étape 2 seule)
+a,0.025689151163207864,0.006467388312766873
+b,0.9695521088661325,0.007826988409005154
+persistance a + b,0.9952412600293404,
+demi-vie d'un choc de corrélation (jours),145.3108638091832,
+log-vraisemblance DCC (partie corrélation),1824.7495683262619,
+log-vraisemblance CCC (a = b = 0),1699.5089299849483,

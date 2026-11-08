@@ -27,13 +27,13 @@ suppressPackageStartupMessages({
   library(here); library(yaml)
   library(xts); library(zoo); library(quantmod)
   library(forecast); library(tseries); library(urca); library(vars)
-  library(lmtest); library(sandwich); library(FinTS); library(rugarch)
+  library(lmtest); library(sandwich); library(FinTS); library(rugarch); library(rmgarch)
 })
 # Seed fixée : seule source d'aléa ici, l'initialisation éventuelle de l'optimiseur de rugarch.
 set.seed(42)
 # Chemins relatifs à la racine du projet (repérée par le dossier .git) : aucun chemin local en dur.
 cfg <- yaml::read_yaml(here("config.yaml"))
-pk <- c("quantmod", "xts", "forecast", "tseries", "urca", "vars", "sandwich", "FinTS", "rugarch", "rmarkdown")
+pk <- c("quantmod", "xts", "forecast", "tseries", "urca", "vars", "sandwich", "FinTS", "rugarch", "rmgarch", "rmarkdown")
 data.frame(package = c("R", pk), version = c(as.character(getRversion()),
                                                vapply(pk, function(p) as.character(packageVersion(p)), "")))
 ```
@@ -495,3 +495,63 @@ transform(dm_cmp, `DM R` = round(`DM R`, 4), `DM Python` = round(`DM Python`, 4)
 ```
 
 **Résultat.** Sur les `r nrow(dm_cmp)` tests comparés, l'écart maximal entre R et Python est de `r signif(max(dm_cmp$"écart max"), 2)`, sur la statistique comme sur la p-value. L'implémentation manuelle du §6 reproduit donc exactement `forecast::dm.test`, y compris le repli à h = 1 quand la variance HAC estimée est négative.
+
+# 6. Section 7.3 : vérification du DCC-GARCH (`rmgarch`)
+
+Le notebook Python (§7.3) estime le DCC(1,1) d'Engle (2002) à la main, en deux étapes : un GJR(1,1)-t par actif, puis la dynamique de corrélation par quasi-vraisemblance gaussienne. On le compare ici à `rmgarch::dccfit`, avec la même spécification, sur le train.
+
+On fait aussi une vérification croisée. On code l'étape 2 en R (quelques lignes), puis on l'applique :
+- aux résidus standardisés de `rmgarch`, ce qui doit redonner `rmgarch` ;
+- aux résidus standardisés de Python (`tab47c`), ce qui doit redonner Python.
+
+On sépare ainsi les écarts dus à l'étape 1, les GARCH univariés, de ceux dus à l'étape 2, la corrélation.
+
+```{r dcc}
+us <- ugarchspec(mean.model = list(armaOrder = c(0, 0), include.mean = FALSE),
+                 variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)), distribution.model = "std")
+dspec <- dccspec(uspec = multispec(replicate(2, us)), dccOrder = c(1, 1), distribution = "mvnorm")
+dfit <- dccfit(dspec, data = R)
+cf <- coef(dfit)
+
+# Étape 2 codée en R : quasi-vraisemblance gaussienne de la corrélation, Q̄ = moyenne des z z'.
+dcc_step2 <- function(z) {
+  Qbar <- crossprod(z) / nrow(z)
+  nll <- function(p) {
+    a <- p[1]; b <- p[2]
+    if (a < 0 || b < 0 || a + b >= 0.9999) return(1e10)
+    Q <- Qbar; s <- 0
+    for (t in seq_len(nrow(z))) {
+      if (t > 1) Q <- (1 - a - b) * Qbar + a * tcrossprod(z[t - 1, ]) + b * Q
+      Rt <- Q / sqrt(outer(diag(Q), diag(Q)))
+      s <- s + log(det(Rt)) + drop(z[t, ] %*% solve(Rt, z[t, ])) - sum(z[t, ]^2)
+    }
+    0.5 * s
+  }
+  optim(c(0.02, 0.95), nll, method = "Nelder-Mead", control = list(reltol = 1e-12, maxit = 2000))$par
+}
+z_r <- as.matrix(residuals(dfit)) / as.matrix(sigma(dfit))
+z_py <- as.matrix(read.csv(here("outputs/tables/tab47c_dcc_residus_train.csv")))
+py <- read.csv(here("outputs/tables/tab47_dcc.csv"), check.names = FALSE, row.names = 1)
+s2_r <- dcc_step2(z_r)
+s2_py <- dcc_step2(z_py)
+dcc_cmp <- data.frame(
+  paramètre = c("a", "b", "a + b"),
+  `rmgarch (étapes 1 et 2)` = c(cf["[Joint]dcca1"], cf["[Joint]dccb1"], cf["[Joint]dcca1"] + cf["[Joint]dccb1"]),
+  `étape 2 en R sur les z de rmgarch` = c(s2_r, sum(s2_r)),
+  `Python (étapes 1 et 2)` = c(py["a", "valeur"], py["b", "valeur"], py["persistance a + b", "valeur"]),
+  `étape 2 en R sur les z de Python` = c(s2_py, sum(s2_py)),
+  check.names = FALSE, row.names = NULL)
+con <- file(here("outputs/tables/tab48_dcc_R_python.csv"), open = "wb")
+write.csv(dcc_cmp, con, row.names = FALSE, eol = "\n")
+close(con)
+dcc_cmp[, -1] <- round(dcc_cmp[, -1], 5)
+dcc_cmp
+```
+
+**Résultat.**
+- **`rmgarch` et Python n'aboutissent pas exactement au même a**, mais à la même persistance a + b. L'écart vient entièrement de l'**étape 1**. Les GARCH univariés de `rugarch` et `arch` ne partent pas de la même variance initiale (section 4.2), donc les résidus standardisés diffèrent légèrement.
+- **L'étape 2 est validée dans les deux langages.**
+  - Appliquée aux résidus de `rmgarch`, l'étape 2 codée en R redonne `rmgarch`.
+  - Appliquée aux résidus de Python, elle redonne Python.
+
+Les deux implémentations du DCC sont donc identiques **à résidus standardisés identiques**.

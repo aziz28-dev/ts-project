@@ -401,6 +401,8 @@ Comparaison R / Python</a>
 </ul></li>
 <li><a href="#section-6-v%C3%A9rification-du-test-de-diebold-mariano" id="toc-section-6-vérification-du-test-de-diebold-mariano">5. Section 6
 : vérification du test de Diebold-Mariano</a></li>
+<li><a href="#section-7.3-v%C3%A9rification-du-dcc-garch-rmgarch" id="toc-section-7.3-vérification-du-dcc-garch-rmgarch">6. Section 7.3 :
+vérification du DCC-GARCH (<code>rmgarch</code>)</a></li>
 </ul>
 </div>
 
@@ -423,13 +425,13 @@ depuis la racine du projet (packages :
   library(here); library(yaml)
   library(xts); library(zoo); library(quantmod)
   library(forecast); library(tseries); library(urca); library(vars)
-  library(lmtest); library(sandwich); library(FinTS); library(rugarch)
+  library(lmtest); library(sandwich); library(FinTS); library(rugarch); library(rmgarch)
 })
 # Seed fixée : seule source d&#39;aléa ici, l&#39;initialisation éventuelle de l&#39;optimiseur de rugarch.
 set.seed(42)
 # Chemins relatifs à la racine du projet (repérée par le dossier .git) : aucun chemin local en dur.
 cfg &lt;- yaml::read_yaml(here(&quot;config.yaml&quot;))
-pk &lt;- c(&quot;quantmod&quot;, &quot;xts&quot;, &quot;forecast&quot;, &quot;tseries&quot;, &quot;urca&quot;, &quot;vars&quot;, &quot;sandwich&quot;, &quot;FinTS&quot;, &quot;rugarch&quot;, &quot;rmarkdown&quot;)
+pk &lt;- c(&quot;quantmod&quot;, &quot;xts&quot;, &quot;forecast&quot;, &quot;tseries&quot;, &quot;urca&quot;, &quot;vars&quot;, &quot;sandwich&quot;, &quot;FinTS&quot;, &quot;rugarch&quot;, &quot;rmgarch&quot;, &quot;rmarkdown&quot;)
 data.frame(package = c(&quot;R&quot;, pk), version = c(as.character(getRversion()),
                                                vapply(pk, function(p) as.character(packageVersion(p)), &quot;&quot;)))</code></pre>
 <div class="kable-table">
@@ -493,6 +495,11 @@ data.frame(package = c(&quot;R&quot;, pk), version = c(as.character(getRversion(
 <td align="left">1.5.6</td>
 </tr>
 <tr class="odd">
+<td align="left">rmgarch</td>
+<td align="left">rmgarch</td>
+<td align="left">1.4.3</td>
+</tr>
+<tr class="even">
 <td align="left">rmarkdown</td>
 <td align="left">rmarkdown</td>
 <td align="left">2.32</td>
@@ -2124,6 +2131,116 @@ entre R et Python est de 7.1^{-15}, sur la statistique comme sur la
 p-value. L’implémentation manuelle du §6 reproduit donc exactement
 <code>forecast::dm.test</code>, y compris le repli à h = 1 quand la
 variance HAC estimée est négative.</p>
+</div>
+<div id="section-7.3-vérification-du-dcc-garch-rmgarch" class="section level1">
+<h1>6. Section 7.3 : vérification du DCC-GARCH
+(<code>rmgarch</code>)</h1>
+<p>Le notebook Python (§7.3) estime le DCC(1,1) d’Engle (2002) à la
+main, en deux étapes : un GJR(1,1)-t par actif, puis la dynamique de
+corrélation par quasi-vraisemblance gaussienne. On le compare ici à
+<code>rmgarch::dccfit</code>, avec la même spécification, sur le
+train.</p>
+<p>On fait aussi une vérification croisée. On code l’étape 2 en R
+(quelques lignes), puis on l’applique : - aux résidus standardisés de
+<code>rmgarch</code>, ce qui doit redonner <code>rmgarch</code> ; - aux
+résidus standardisés de Python (<code>tab47c</code>), ce qui doit
+redonner Python.</p>
+<p>On sépare ainsi les écarts dus à l’étape 1, les GARCH univariés, de
+ceux dus à l’étape 2, la corrélation.</p>
+<pre class="r"><code>us &lt;- ugarchspec(mean.model = list(armaOrder = c(0, 0), include.mean = FALSE),
+                 variance.model = list(model = &quot;gjrGARCH&quot;, garchOrder = c(1, 1)), distribution.model = &quot;std&quot;)
+dspec &lt;- dccspec(uspec = multispec(replicate(2, us)), dccOrder = c(1, 1), distribution = &quot;mvnorm&quot;)
+dfit &lt;- dccfit(dspec, data = R)
+cf &lt;- coef(dfit)
+
+# Étape 2 codée en R : quasi-vraisemblance gaussienne de la corrélation, Q̄ = moyenne des z z&#39;.
+dcc_step2 &lt;- function(z) {
+  Qbar &lt;- crossprod(z) / nrow(z)
+  nll &lt;- function(p) {
+    a &lt;- p[1]; b &lt;- p[2]
+    if (a &lt; 0 || b &lt; 0 || a + b &gt;= 0.9999) return(1e10)
+    Q &lt;- Qbar; s &lt;- 0
+    for (t in seq_len(nrow(z))) {
+      if (t &gt; 1) Q &lt;- (1 - a - b) * Qbar + a * tcrossprod(z[t - 1, ]) + b * Q
+      Rt &lt;- Q / sqrt(outer(diag(Q), diag(Q)))
+      s &lt;- s + log(det(Rt)) + drop(z[t, ] %*% solve(Rt, z[t, ])) - sum(z[t, ]^2)
+    }
+    0.5 * s
+  }
+  optim(c(0.02, 0.95), nll, method = &quot;Nelder-Mead&quot;, control = list(reltol = 1e-12, maxit = 2000))$par
+}
+z_r &lt;- as.matrix(residuals(dfit)) / as.matrix(sigma(dfit))
+z_py &lt;- as.matrix(read.csv(here(&quot;outputs/tables/tab47c_dcc_residus_train.csv&quot;)))
+py &lt;- read.csv(here(&quot;outputs/tables/tab47_dcc.csv&quot;), check.names = FALSE, row.names = 1)
+s2_r &lt;- dcc_step2(z_r)
+s2_py &lt;- dcc_step2(z_py)
+dcc_cmp &lt;- data.frame(
+  paramètre = c(&quot;a&quot;, &quot;b&quot;, &quot;a + b&quot;),
+  `rmgarch (étapes 1 et 2)` = c(cf[&quot;[Joint]dcca1&quot;], cf[&quot;[Joint]dccb1&quot;], cf[&quot;[Joint]dcca1&quot;] + cf[&quot;[Joint]dccb1&quot;]),
+  `étape 2 en R sur les z de rmgarch` = c(s2_r, sum(s2_r)),
+  `Python (étapes 1 et 2)` = c(py[&quot;a&quot;, &quot;valeur&quot;], py[&quot;b&quot;, &quot;valeur&quot;], py[&quot;persistance a + b&quot;, &quot;valeur&quot;]),
+  `étape 2 en R sur les z de Python` = c(s2_py, sum(s2_py)),
+  check.names = FALSE, row.names = NULL)
+con &lt;- file(here(&quot;outputs/tables/tab48_dcc_R_python.csv&quot;), open = &quot;wb&quot;)
+write.csv(dcc_cmp, con, row.names = FALSE, eol = &quot;\n&quot;)
+close(con)
+dcc_cmp[, -1] &lt;- round(dcc_cmp[, -1], 5)
+dcc_cmp</code></pre>
+<div class="kable-table">
+<table>
+<colgroup>
+<col width="8%" />
+<col width="19%" />
+<col width="27%" />
+<col width="18%" />
+<col width="26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">paramètre</th>
+<th align="right">rmgarch (étapes 1 et 2)</th>
+<th align="right">étape 2 en R sur les z de rmgarch</th>
+<th align="right">Python (étapes 1 et 2)</th>
+<th align="right">étape 2 en R sur les z de Python</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">a</td>
+<td align="right">0.02742</td>
+<td align="right">0.02741</td>
+<td align="right">0.02569</td>
+<td align="right">0.02569</td>
+</tr>
+<tr class="even">
+<td align="left">b</td>
+<td align="right">0.96762</td>
+<td align="right">0.96763</td>
+<td align="right">0.96955</td>
+<td align="right">0.96955</td>
+</tr>
+<tr class="odd">
+<td align="left">a + b</td>
+<td align="right">0.99504</td>
+<td align="right">0.99504</td>
+<td align="right">0.99524</td>
+<td align="right">0.99524</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Résultat.</strong> - <strong><code>rmgarch</code> et Python
+n’aboutissent pas exactement au même a</strong>, mais à la même
+persistance a + b. L’écart vient entièrement de l’<strong>étape
+1</strong>. Les GARCH univariés de <code>rugarch</code> et
+<code>arch</code> ne partent pas de la même variance initiale (section
+4.2), donc les résidus standardisés diffèrent légèrement. -
+<strong>L’étape 2 est validée dans les deux langages.</strong> -
+Appliquée aux résidus de <code>rmgarch</code>, l’étape 2 codée en R
+redonne <code>rmgarch</code>. - Appliquée aux résidus de Python, elle
+redonne Python.</p>
+<p>Les deux implémentations du DCC sont donc identiques <strong>à
+résidus standardisés identiques</strong>.</p>
 </div>
 
 

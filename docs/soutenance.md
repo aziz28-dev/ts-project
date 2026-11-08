@@ -204,6 +204,15 @@ Non. Il **explique** les mouvements du jour : XOM monte de 0,37 % quand le Brent
 **Pourquoi ne pas avoir expliqué le creux de corrélation de mars 2022 ?**
 La corrélation du 1ᵉʳ mars porte sur les 60 jours précédents, alors que la seule annonce propre à XOM ce jour-là (la sortie de Sakhalin-1) a été faite après la clôture. L'attribuer à cet événement serait une causalité inventée, l'erreur que l'on reproche justement au LLM.
 
+**Qu'apporte le DCC-GARCH par rapport à la corrélation glissante ?**
+La corrélation glissante constate que le lien varie. Le DCC le modélise : la corrélation de demain dépend du choc commun d'aujourd'hui (a = 0,026) et de la corrélation d'hier (b = 0,970). Elle ne dépend pas d'une fenêtre arbitraire de 60 jours, et elle réagit dès le lendemain d'un choc.
+
+**Comment savez-vous que la corrélation n'est pas constante ?**
+Par le test d'Engle et Sheppard (H₀ : corrélation constante), qui donne p < 0,0001, même sans 2020. On n'utilise pas un rapport de vraisemblance DCC contre CCC : sous H₀, b n'est pas identifié, donc la loi du χ² ne s'applique pas.
+
+**Pourquoi rmgarch ne donne-t-il pas exactement les mêmes paramètres ?**
+À cause de l'étape 1 : les GARCH univariés de R et de Python ne partent pas de la même variance initiale, comme au §3d. Sur les mêmes résidus standardisés, les deux étapes 2 donnent le même résultat.
+
 ## Usage de l'IA
 
 **Avez-vous utilisé une IA ?**

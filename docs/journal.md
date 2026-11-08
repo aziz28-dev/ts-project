@@ -248,4 +248,19 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - **Brent de la veille** : coefficient −0,005 (p = 0,86), aucun gain de R² ; hors 2020 −0,027 (p = 0,24).
 - **Test, protocole du §6** : RMSE à h = 10 de 4,628 $ pour le VARX comme pour le VAR(1). Diebold-Mariano contre la marche aléatoire : p = 0,69 ; contre le VAR(1) : p de 0,10 à 0,50.
 
-**Décision.** Le Brent est une variable explicative (contemporaine), pas prédictive. Le VARX n'est pas retenu pour la prévision. Le lien XOM – XLE varie dans le temps : un DCC-GARCH serait l'extension suivante (non réalisée).
+**Décision.** Le Brent est une variable explicative (contemporaine), pas prédictive. Le VARX n'est pas retenu pour la prévision. Le lien XOM – XLE varie dans le temps : il est modélisé par un DCC-GARCH au §7.3.
+
+### Phase 7 — DCC-GARCH (2026-11-08)
+
+**Implémentation** : `src/extensions.py` (DCC(1,1) codé à la main en deux étapes, test d'Engle et Sheppard) ; notebook §7.3 (tab47 à tab47e, figure 23) ; vérification `rmgarch` dans la section 6 de `classical_R.Rmd` (tab48).
+
+**Résultats** (paramètres estimés sur le train, corrélation filtrée sur 2016-2025)
+- Étape 1 : GJR(1,1)-t de XOM identique au §3.3 ; XLE : γ = 0,057, ν = 8,1.
+- Étape 2 : a = 0,026 (erreur-type 0,006), b = 0,970 (0,008), a + b = 0,995, demi-vie d'un choc de corrélation d'environ 145 jours.
+- Engle-Sheppard (H₀ : corrélation constante) : χ²(6) = 34,3 sur le train, 32,1 hors 2020, p < 0,0001 dans les deux cas : la corrélation est dynamique.
+- Corrélation DCC moyenne : 0,83 (2016-2019), 0,92 (2020), 0,92 (2021-2024), 0,88 (2025, hors échantillon ; maximum 0,92 le 2025-04-11). Corrélation de 0,946 avec la corrélation glissante sur 60 jours.
+- `rmgarch` : a = 0,027, b = 0,968, même persistance. L'écart vient de l'étape 1 (variance initiale des GARCH univariés). L'étape 2 codée en R redonne Python sur les résidus de Python, et `rmgarch` sur les résidus de `rmgarch`.
+
+**Décision.** Le lien XOM – XLE est significativement dynamique. Le DCC fournit une corrélation conditionnelle utilisable, par exemple, pour un ratio de couverture XOM / XLE quotidien.
+
+**FinBERT (extension 4 du plan) : écarté volontairement.** Le corpus gratuit disponible sur toute la période (communiqués 8-K sur SEC EDGAR) ne compterait qu'une quarantaine d'annonces de résultats : un test de l'effet du sentiment sur les rendements aurait très peu de puissance. Il demanderait aussi environ 1,5 Go de dépendances supplémentaires (PyTorch, transformers, modèle). À mentionner comme perspective dans le rapport, pour une raison méthodologique et non par manque de temps.
