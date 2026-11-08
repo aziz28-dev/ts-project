@@ -457,3 +457,41 @@ Les écarts restants ont tous une cause identifiée et vérifiée :
 - GJR(1,1) de Student, avec une persistance d'environ 0,999.
 
 Ils apportent même deux informations utiles : la **fragilité de l'ARIMA(3,1,2)**, dont la vraisemblance a plusieurs maxima, et celle du **test d'Engle-Granger**, sensible aux premières observations.
+
+# 5. Section 6 : vérification du test de Diebold-Mariano
+
+Le notebook Python (§6.4) implémente le test de Diebold-Mariano à la main : perte quadratique, variance HAC à h − 1 retards, correction de Harvey, Leybourne et Newbold. Ici, on recalcule le même test avec `forecast::dm.test`, sur **les mêmes erreurs de prévision** du prix (`tab42_erreurs_test.csv`, exportées par le §6.7). Les prévisions elles-mêmes ne sont pas recalculées en R : le cahier n'exige en R que le socle classique (§3), et ce qu'on vérifie ici, c'est l'implémentation du test.
+
+```{r diebold-mariano}
+err <- read.csv(here("outputs/tables/tab42_erreurs_test.csv"), check.names = FALSE, encoding = "UTF-8")
+dm_py <- read.csv(here("outputs/tables/tab38_diebold_mariano.csv"), check.names = FALSE, encoding = "UTF-8")
+base <- "Marche aléatoire (baseline)"
+rows <- list()
+for (m in setdiff(unique(err$modèle), base)) {
+  for (h in sort(unique(err$h))) {
+    e1 <- err[err$modèle == m & err$h == h, ]
+    e2 <- err[err$modèle == base & err$h == h, ]
+    stopifnot(identical(e1$origine, e2$origine))
+    py <- dm_py[dm_py$modèle == m & dm_py$h == h, ]
+    # Prévisions identiques à la baseline (GARCH de moyenne nulle) : le test n'est pas défini.
+    if (all(e1$`erreur ($)` == e2$`erreur ($)`)) next
+    # dm.test signale une variance négative par un avertissement, puis refait le test avec h = 1.
+    r <- withCallingHandlers(
+      forecast::dm.test(e1$`erreur ($)`, e2$`erreur ($)`, h = h, power = 2, alternative = "two.sided"),
+      warning = function(w) invokeRestart("muffleWarning"))
+    rows[[length(rows) + 1]] <- data.frame(
+      modèle = m, h = h, `DM R` = unname(r$statistic), `DM Python` = py$DM,
+      `p R` = r$p.value, `p Python` = py$`p-value`, check.names = FALSE)
+  }
+}
+dm_cmp <- do.call(rbind, rows)
+dm_cmp$`écart max` <- pmax(abs(dm_cmp$`DM R` - dm_cmp$`DM Python`), abs(dm_cmp$`p R` - dm_cmp$`p Python`))
+con <- file(here("outputs/tables/tab43_dm_R_python.csv"), open = "wb")
+write.csv(dm_cmp, con, row.names = FALSE, fileEncoding = "UTF-8", eol = "\n")
+close(con)
+transform(dm_cmp, `DM R` = round(`DM R`, 4), `DM Python` = round(`DM Python`, 4),
+          `p R` = signif(`p R`, 4), `p Python` = signif(`p Python`, 4), `écart max` = signif(`écart max`, 2),
+          check.names = FALSE)
+```
+
+**Résultat.** Sur les `r nrow(dm_cmp)` tests comparés, l'écart maximal entre R et Python est de `r signif(max(dm_cmp$"écart max"), 2)`, sur la statistique comme sur la p-value. L'implémentation manuelle du §6 reproduit donc exactement `forecast::dm.test`, y compris le repli à h = 1 quand la variance HAC estimée est négative.

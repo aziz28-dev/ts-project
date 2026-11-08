@@ -1,0 +1,22 @@
+modèle,h,n,DM,p-value,repli h = 1,verdict (5 %)
+"ARIMA(3,1,2)",1,252,0.8238686368257232,0.41079635010201243,False,pas de différence significative
+"ARIMA(3,1,2)",5,248,0.8729006705492383,0.3835650116733349,False,pas de différence significative
+"ARIMA(3,1,2)",10,243,4.107937828604745,5.465776994276892e-05,False,significativement moins bon
+VAR(1),1,252,0.018265996898574995,0.9854411647284714,False,pas de différence significative
+VAR(1),5,248,-0.029835238809809716,0.9762225474175632,False,pas de différence significative
+VAR(1),10,243,-0.40186374820408605,0.6881389824862163,False,pas de différence significative
+VECM,1,252,0.20355421134266438,0.838866806949638,False,pas de différence significative
+VECM,5,248,0.5129649358521327,0.6084343124192719,False,pas de différence significative
+VECM,10,243,1.0077751850135457,0.31456897716819787,False,pas de différence significative
+Marche aléatoire + GJR-GARCH-t,1,252,,,False,prévisions identiques à la baseline
+Marche aléatoire + GJR-GARCH-t,5,248,,,False,prévisions identiques à la baseline
+Marche aléatoire + GJR-GARCH-t,10,243,,,False,prévisions identiques à la baseline
+LSTM,1,252,-0.31043205042270144,0.7564900382422092,False,pas de différence significative
+LSTM,5,248,1.3512791057483733,0.17784240445274158,False,pas de différence significative
+LSTM,10,243,2.5591000824450987,0.011103741304161497,False,significativement moins bon
+GRU,1,252,-0.3486459830891326,0.727647366729179,False,pas de différence significative
+GRU,5,248,0.4054404873238364,0.6855047157868648,False,pas de différence significative
+GRU,10,243,4.454505806192327,1.2854938974799441e-05,True,significativement moins bon
+Hybride ARIMA+LSTM,1,252,0.6275345207028378,0.5308793778666623,False,pas de différence significative
+Hybride ARIMA+LSTM,5,248,1.3458065679250406,0.1795988976070609,False,pas de différence significative
+Hybride ARIMA+LSTM,10,243,2.69368037569188,0.007561288839571538,False,significativement moins bon

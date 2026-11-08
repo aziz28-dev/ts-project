@@ -399,6 +399,8 @@ Comparaison R / Python</a>
 <li><a href="#v%C3%A9rification-des-%C3%A9carts" id="toc-vérification-des-écarts">4.1 Vérification des écarts</a></li>
 <li><a href="#explication-des-%C3%A9carts" id="toc-explication-des-écarts">4.2 Explication des écarts</a></li>
 </ul></li>
+<li><a href="#section-6-v%C3%A9rification-du-test-de-diebold-mariano" id="toc-section-6-vérification-du-test-de-diebold-mariano">5. Section 6
+: vérification du test de Diebold-Mariano</a></li>
 </ul>
 </div>
 
@@ -553,14 +555,14 @@ check</code></pre>
 <tr class="odd">
 <td align="right">2514</td>
 <td align="right">2514</td>
-<td align="right">4.2e-05</td>
-<td align="right">8e-07</td>
+<td align="right">3.81e-05</td>
+<td align="right">7e-07</td>
 </tr>
 </tbody>
 </table>
 </div>
 <p>Résultat : quantmod renvoie 2514 lignes pour 2514 dans le cache, avec
-un écart relatif maximal de 8.0e-07 sur l’Adj Close. Si cet écart est de
+un écart relatif maximal de 6.8e-07 sur l’Adj Close. Si cet écart est de
 l’ordre de l’arrondi, les deux sources sont identiques. S’il est plus
 grand, Yahoo a réajusté l’historique depuis la constitution du cache
 (nouveau dividende), ce qui justifie justement de travailler sur le
@@ -1869,6 +1871,259 @@ l’ARIMA(3,1,2)</strong>, dont la vraisemblance a plusieurs maxima, et
 celle du <strong>test d’Engle-Granger</strong>, sensible aux premières
 observations.</p>
 </div>
+</div>
+<div id="section-6-vérification-du-test-de-diebold-mariano" class="section level1">
+<h1>5. Section 6 : vérification du test de Diebold-Mariano</h1>
+<p>Le notebook Python (§6.4) implémente le test de Diebold-Mariano à la
+main : perte quadratique, variance HAC à h − 1 retards, correction de
+Harvey, Leybourne et Newbold. Ici, on recalcule le même test avec
+<code>forecast::dm.test</code>, sur <strong>les mêmes erreurs de
+prévision</strong> du prix (<code>tab42_erreurs_test.csv</code>,
+exportées par le §6.7). Les prévisions elles-mêmes ne sont pas
+recalculées en R : le cahier n’exige en R que le socle classique (§3),
+et ce qu’on vérifie ici, c’est l’implémentation du test.</p>
+<pre class="r"><code>err &lt;- read.csv(here(&quot;outputs/tables/tab42_erreurs_test.csv&quot;), check.names = FALSE, encoding = &quot;UTF-8&quot;)
+dm_py &lt;- read.csv(here(&quot;outputs/tables/tab38_diebold_mariano.csv&quot;), check.names = FALSE, encoding = &quot;UTF-8&quot;)
+base &lt;- &quot;Marche aléatoire (baseline)&quot;
+rows &lt;- list()
+for (m in setdiff(unique(err$modèle), base)) {
+  for (h in sort(unique(err$h))) {
+    e1 &lt;- err[err$modèle == m &amp; err$h == h, ]
+    e2 &lt;- err[err$modèle == base &amp; err$h == h, ]
+    stopifnot(identical(e1$origine, e2$origine))
+    py &lt;- dm_py[dm_py$modèle == m &amp; dm_py$h == h, ]
+    # Prévisions identiques à la baseline (GARCH de moyenne nulle) : le test n&#39;est pas défini.
+    if (all(e1$`erreur ($)` == e2$`erreur ($)`)) next
+    # dm.test signale une variance négative par un avertissement, puis refait le test avec h = 1.
+    r &lt;- withCallingHandlers(
+      forecast::dm.test(e1$`erreur ($)`, e2$`erreur ($)`, h = h, power = 2, alternative = &quot;two.sided&quot;),
+      warning = function(w) invokeRestart(&quot;muffleWarning&quot;))
+    rows[[length(rows) + 1]] &lt;- data.frame(
+      modèle = m, h = h, `DM R` = unname(r$statistic), `DM Python` = py$DM,
+      `p R` = r$p.value, `p Python` = py$`p-value`, check.names = FALSE)
+  }
+}
+dm_cmp &lt;- do.call(rbind, rows)
+dm_cmp$`écart max` &lt;- pmax(abs(dm_cmp$`DM R` - dm_cmp$`DM Python`), abs(dm_cmp$`p R` - dm_cmp$`p Python`))
+con &lt;- file(here(&quot;outputs/tables/tab43_dm_R_python.csv&quot;), open = &quot;wb&quot;)
+write.csv(dm_cmp, con, row.names = FALSE, fileEncoding = &quot;UTF-8&quot;, eol = &quot;\n&quot;)
+close(con)
+transform(dm_cmp, `DM R` = round(`DM R`, 4), `DM Python` = round(`DM Python`, 4),
+          `p R` = signif(`p R`, 4), `p Python` = signif(`p Python`, 4), `écart max` = signif(`écart max`, 2),
+          check.names = FALSE)</code></pre>
+<div class="kable-table">
+<table style="width:99%;">
+<colgroup>
+<col width="6%" />
+<col width="25%" />
+<col width="4%" />
+<col width="10%" />
+<col width="13%" />
+<col width="13%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">modèle</th>
+<th align="right">h</th>
+<th align="right">DM R</th>
+<th align="right">DM Python</th>
+<th align="right">p R</th>
+<th align="right">p Python</th>
+<th align="right">écart max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">DM</td>
+<td align="left">ARIMA(3,1,2)</td>
+<td align="right">1</td>
+<td align="right">0.8239</td>
+<td align="right">0.8239</td>
+<td align="right">0.4108000</td>
+<td align="right">0.4108000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM1</td>
+<td align="left">ARIMA(3,1,2)</td>
+<td align="right">5</td>
+<td align="right">0.8729</td>
+<td align="right">0.8729</td>
+<td align="right">0.3836000</td>
+<td align="right">0.3836000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM2</td>
+<td align="left">ARIMA(3,1,2)</td>
+<td align="right">10</td>
+<td align="right">4.1079</td>
+<td align="right">4.1079</td>
+<td align="right">0.0000547</td>
+<td align="right">0.0000547</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM3</td>
+<td align="left">VAR(1)</td>
+<td align="right">1</td>
+<td align="right">0.0183</td>
+<td align="right">0.0183</td>
+<td align="right">0.9854000</td>
+<td align="right">0.9854000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM4</td>
+<td align="left">VAR(1)</td>
+<td align="right">5</td>
+<td align="right">-0.0298</td>
+<td align="right">-0.0298</td>
+<td align="right">0.9762000</td>
+<td align="right">0.9762000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM5</td>
+<td align="left">VAR(1)</td>
+<td align="right">10</td>
+<td align="right">-0.4019</td>
+<td align="right">-0.4019</td>
+<td align="right">0.6881000</td>
+<td align="right">0.6881000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM6</td>
+<td align="left">VECM</td>
+<td align="right">1</td>
+<td align="right">0.2036</td>
+<td align="right">0.2036</td>
+<td align="right">0.8389000</td>
+<td align="right">0.8389000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM7</td>
+<td align="left">VECM</td>
+<td align="right">5</td>
+<td align="right">0.5130</td>
+<td align="right">0.5130</td>
+<td align="right">0.6084000</td>
+<td align="right">0.6084000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM8</td>
+<td align="left">VECM</td>
+<td align="right">10</td>
+<td align="right">1.0078</td>
+<td align="right">1.0078</td>
+<td align="right">0.3146000</td>
+<td align="right">0.3146000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM9</td>
+<td align="left">LSTM</td>
+<td align="right">1</td>
+<td align="right">-0.3104</td>
+<td align="right">-0.3104</td>
+<td align="right">0.7565000</td>
+<td align="right">0.7565000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM10</td>
+<td align="left">LSTM</td>
+<td align="right">5</td>
+<td align="right">1.3513</td>
+<td align="right">1.3513</td>
+<td align="right">0.1778000</td>
+<td align="right">0.1778000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM11</td>
+<td align="left">LSTM</td>
+<td align="right">10</td>
+<td align="right">2.5591</td>
+<td align="right">2.5591</td>
+<td align="right">0.0111000</td>
+<td align="right">0.0111000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM12</td>
+<td align="left">GRU</td>
+<td align="right">1</td>
+<td align="right">-0.3486</td>
+<td align="right">-0.3486</td>
+<td align="right">0.7276000</td>
+<td align="right">0.7276000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM13</td>
+<td align="left">GRU</td>
+<td align="right">5</td>
+<td align="right">0.4054</td>
+<td align="right">0.4054</td>
+<td align="right">0.6855000</td>
+<td align="right">0.6855000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM14</td>
+<td align="left">GRU</td>
+<td align="right">10</td>
+<td align="right">4.4545</td>
+<td align="right">4.4545</td>
+<td align="right">0.0000129</td>
+<td align="right">0.0000129</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM15</td>
+<td align="left">Hybride ARIMA+LSTM</td>
+<td align="right">1</td>
+<td align="right">0.6275</td>
+<td align="right">0.6275</td>
+<td align="right">0.5309000</td>
+<td align="right">0.5309000</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">DM16</td>
+<td align="left">Hybride ARIMA+LSTM</td>
+<td align="right">5</td>
+<td align="right">1.3458</td>
+<td align="right">1.3458</td>
+<td align="right">0.1796000</td>
+<td align="right">0.1796000</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">DM17</td>
+<td align="left">Hybride ARIMA+LSTM</td>
+<td align="right">10</td>
+<td align="right">2.6937</td>
+<td align="right">2.6937</td>
+<td align="right">0.0075610</td>
+<td align="right">0.0075610</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Résultat.</strong> Sur les 18 tests comparés, l’écart maximal
+entre R et Python est de 7.1^{-15}, sur la statistique comme sur la
+p-value. L’implémentation manuelle du §6 reproduit donc exactement
+<code>forecast::dm.test</code>, y compris le repli à h = 1 quand la
+variance HAC estimée est négative.</p>
 </div>
 
 

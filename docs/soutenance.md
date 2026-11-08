@@ -165,6 +165,31 @@ L'ARIMA modélise la partie linéaire et le LSTM ses résidus. Il ne bat la marc
 **Pourquoi la sélection par gain et pas par RMSE ?**
 La fenêtre de 60 retire des observations, donc les RMSE bruts ne portent pas sur les mêmes échantillons. Le gain face à la prévision zéro, calculé sur les mêmes points, est comparable d'une configuration à l'autre.
 
+## Prévision et évaluation (§6)
+
+**Pourquoi 252 origines et pas une seule prévision ?**
+Une prévision unique depuis la fin du train ne donne que 10 erreurs : c'est trop peu pour un test. Avec une prévision depuis chaque jour du test, on obtient environ 250 erreurs par horizon, ce qu'il faut pour Diebold-Mariano.
+
+**Pourquoi ré-estimer tous les 20 jours seulement ?**
+Pour limiter le temps de calcul : 13 estimations au lieu de 252. Entre deux estimations, les paramètres restent fixes, mais l'état du modèle (derniers rendements, variance GARCH) est mis à jour chaque jour. Chaque prévision utilise donc toute l'information disponible.
+
+**Quel est le meilleur modèle ?**
+Ça dépend de l'usage :
+- pour le **niveau** du prix, la marche aléatoire : aucun modèle ne la bat significativement (Diebold-Mariano) ;
+- pour le **risque**, le GJR-GARCH-t : c'est le seul dont les intervalles à 95 % ont une couverture correcte (94,8 %), et ils sont 16 % plus étroits.
+
+**Le VAR(1) a un RMSE plus faible à 10 jours. Pourquoi ne pas le retenir ?**
+Le gain est de 0,5 % et le test de Diebold-Mariano donne p = 0,69 : la différence n'est pas significative. De plus, le Granger robuste ne trouvait aucune prédictibilité sur le train.
+
+**Pourquoi les intervalles à variance constante sont-ils trop larges ?**
+Leur variance mélange tout le passé, crise de 2020 comprise. Le test (2025) est plus calme : le prix reste dans l'intervalle 98 % du temps au lieu de 95 %. Le GARCH s'adapte au régime du moment.
+
+**Comment avez-vous vérifié votre test de Diebold-Mariano ?**
+En le recalculant en R avec `forecast::dm.test` sur exactement les mêmes erreurs : les statistiques et les p-values coïncident.
+
+**Pourquoi la MAPE ne se calcule-t-elle pas sur les rendements ?**
+Les rendements sont souvent proches de zéro : diviser par eux fait exploser l'erreur relative. On calcule toutes les métriques sur le prix en dollars.
+
 ## Usage de l'IA
 
 **Avez-vous utilisé une IA ?**

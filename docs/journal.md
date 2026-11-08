@@ -186,3 +186,50 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - Le Brent n'a pas été utilisé comme variable d'entrée.
 - Prophet n'a pas été estimé : il n'y a pas de saisonnalité (§2.4).
 - Une piste plus prometteuse serait d'appliquer les réseaux à la variance plutôt qu'à la moyenne.
+
+## Phase 5 — IA générative et LLM (2026-11-08)
+
+**Fichiers** : `llm/` (README avec l'ordre des étapes et la grille de 9 erreurs à chercher, prompts, réponses intégrales, interprétation personnelle, comparaison).
+
+**Déroulé**
+1. **Interprétation personnelle**, rédigée par les étudiants avant tout prompt (`llm/interpretation_personnelle.md`, datée du 2026-11-08). Elle a été construite par questions guidées : les réponses sont celles des étudiants, avec seulement des corrections de vocabulaire et de chiffres.
+2. **Prompts 1 et 2** envoyés à ChatGPT (agent GPT-6), chacun dans une nouvelle conversation. Les réponses sont archivées en entier.
+3. **Prompt 3** d'abord envoyé par erreur avant la phase 6, champs de données vides (essai conservé, `03a_…`), puis renvoyé avec les résultats de la phase 6 (prévision depuis le 2025-12-31 et évaluation sur 2025).
+
+**Comparaison** (`llm/comparaison.md`)
+- **Convergences** : marche aléatoire pour la moyenne, GARCH avec loi de Student et effet de levier, aucun avantage des réseaux. Le LLM n'invente aucune p-value et signale l'absence de données au prompt 3.
+- **Erreurs du LLM** :
+  - 2 oublis : la cointégration, alors que les deux log-prix sont I(1), et la FEVD, qui dépend de l'ordre ;
+  - 3 approximations : persistance GARCH prise à la lettre, cause des pics de 2022 ajoutée sans source, corrélation des chocs présentée comme celle des rendements ;
+  - 1 terme causal : « influence » pour Granger ;
+  - à l'essai sans données, des scénarios d'achat « si la prévision est favorable », impossibles avec une marche aléatoire, et une « direction des prévisions » attribuée au GARCH ;
+  - au prompt 3 rempli, une recommandation HOLD justifiée par l'absence de signal de vente (raisonnement non fondé), un GARCH qui « ne prédit pas avec certitude la direction » et « intervalle de confiance » au lieu d'intervalle de prévision. Les chiffres et les tests y sont en revanche lus correctement.
+
+## Phase 6 — Prévision et évaluation sur le test (2026-11-08)
+
+**Implémentation** : `src/evaluation.py` ; notebook §6. Tableaux tab36 à tab42, figures 17 à 20. Vérification de Diebold-Mariano en R : section 5 de `classical_R.Rmd`, tableau tab43 (18 tests, écart maximal de 7e-15 avec `forecast::dm.test`, repli à h = 1 compris).
+
+**Protocole**
+- 252 origines (du 2024-12-27 au 2025-12-30), prévisions h = 1 à 10 ; entre 243 et 252 erreurs par horizon.
+- Modèles classiques ré-estimés tous les 20 jours sur fenêtre croissante (13 estimations), état filtré chaque jour. Réseaux entraînés une seule fois sur le train.
+- Prévisions maison vérifiées identiques à statsmodels (ARIMA `get_forecast`, VAR `forecast`, VECM `predict`) à l'origine du premier bloc.
+- Intervalles du GARCH par simulation (2 000 trajectoires). L'option `random_state` de `arch` n'agit pas sur ces tirages : la graine est passée au générateur de la loi de Student pour que les résultats soient reproductibles.
+
+**Résultats**
+- **Prévision ponctuelle (tab36, prix en $).** RMSE de la marche aléatoire : 1,560 (h = 1), 3,617 (h = 5), 4,650 (h = 10). Le VAR(1) est le seul un peu meilleur à moyen terme (4,628 à h = 10, −0,5 %). Les réseaux sont 2,6 à 4,7 % moins bons à h = 10. Le VECM est identique à la baseline à 0,04 % près.
+- **Diebold-Mariano (tab38).** Aucun modèle n'est significativement meilleur que la marche aléatoire, à aucun horizon (VAR(1) h = 10 : p = 0,69). Sont significativement moins bons à h = 10 : ARIMA(3,1,2), LSTM, GRU, hybride.
+- **Intervalles à 95 % (tab37).**
+  - Les modèles à variance constante couvrent 98 % à h = 1 (test binomial p = 0,009 à 0,028) : ils sont trop larges, car le test est plus calme que le train.
+  - Le GJR-GARCH-t couvre 94,8 % (p = 0,885), avec des intervalles 16 % plus étroits.
+- **Variance (tab39).**
+  - Le GJR-GARCH-t a le meilleur QLIKE (1,732), devant l'EWMA (1,738), la volatilité sur 21 jours (1,764) et la variance constante (1,844).
+  - L'écart avec la variance constante n'est significatif qu'à 10 % (p = 0,075).
+  - Le pic de volatilité prévue (52 %) tombe le 2025-04-10, fin de la séquence des droits de douane.
+- **Stabilité (tab40).** Les paramètres du GJR ré-estimés restent stables : γ de 0,039 à 0,046, β de 0,933 à 0,936, ν de 7,2 à 7,7.
+
+**Décision.** Modèle final : **ARIMA(0,1,0) + GJR-GARCH(1,1)-t**.
+- La marche aléatoire est retenue pour le niveau du prix.
+- Le GARCH est retenu pour le risque : c'est le seul modèle bien calibré.
+- Le VAR et le VECM servent à l'analyse du lien XOM / XLE, pas à la prévision.
+
+**Limites.** Un seul an de test, calme et haussier (+17 %) ; réseaux non ré-entraînés pendant le test ; coûts de transaction ignorés.
