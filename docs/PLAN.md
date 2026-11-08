@@ -75,7 +75,7 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 6 | h = 5–10, IC, tableau unique MSE/RMSE/MAE/MAPE, Diebold-Mariano | Prévision multi-origines sur le test | Tableau récapitulatif + matrice DM | Fait : 252 origines, ré-estimation tous les 20 jours, tableau unique sur le prix (tab36), intervalles (tab37), DM codé à la main et vérifié en R (tab38, tab43), QLIKE (tab39), choix final (tab41) |
 | 7 | Extensions : corrélation dynamique, variable exogène | Corrélation glissante 60 j annotée, VARX avec le Brent, DCC-GARCH | Figures 21-23, tableaux 44-48 | Fait (Python) : lien XOM – XLE renforcé depuis 2020, Brent explicatif mais pas prédictif ; DCC-GARCH codé à la main et vérifié avec `rmgarch` (corrélation dynamique, Engle-Sheppard p < 0,0001) ; FinBERT non réalisé |
 | 8.1 | Socle classique en R ET Python, code commenté « pourquoi » | `.Rmd` + `.ipynb` | Deux notebooks | Fait : `classical_R.Rmd` reproduit les phases 1 à 3, comparaison R/Python (91 grandeurs) ; commentaires « pourquoi » |
-| 8.3 | Notebook reproductible de bout en bout | Seed, versions, pas de chemin local | Exécution sur env. vierge | À faire |
+| 8.3 | Notebook reproductible de bout en bout | Seed, versions, pas de chemin local | Exécution sur env. vierge | Fait : clone neuf, environnements Python et R neufs, deux notebooks exécutés sans erreur, résultats identiques au dépôt |
 | 8.2 | Rapport Word ou PDF, 15 à 25 pages | `rapport/rapport.md` → `rapport.docx` et `rapport.pdf` | Rapport | Fait : 20 pages hors annexes (49 avec les annexes : reproduction, interprétation personnelle, prompts et réponses intégrales, comparaison LLM) |
 | 8.4 | Discussion critique (modèles + IA générative) | Section dédiée | Rapport | Fait : §9 du rapport (limites des modèles, réflexion générale sur l'IA générative) |
 
@@ -109,7 +109,7 @@ ts-project/
 ├── outputs/
 │   ├── figures/              # PNG numérotés fig01_..., fig02_...
 │   └── tables/               # CSV des tableaux du rapport
-└── report/
+└── rapport/
     └── rapport.docx / .pdf
 ```
 

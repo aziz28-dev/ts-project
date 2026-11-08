@@ -273,3 +273,19 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - Annexes générées automatiquement depuis `llm/` : reproduction (A), interprétation personnelle (B), prompts et réponses intégrales, reproduits sans retouche, y compris les formules du LLM (C), comparaison détaillée (D).
 - Format A4, tableaux en 9 pt, équations Word natives. Vérification visuelle de toutes les pages du corps et des annexes (rendu PDF).
 - FinBERT mentionné comme extension écartée pour raison méthodologique (§7.3 du rapport).
+
+## Phase 9 — Vérification sur environnement vierge (2026-11-08)
+
+**Protocole** : clone neuf depuis GitHub (commit `6f8ff91`), suppression de toutes les sorties générées (`outputs/`, `data/processed/`), environnement Python neuf (Python 3.11.9, `pip install -r requirements.txt` sans cache), bibliothèque R vide (`R_LIBS_USER` neuf, `Rscript install_packages.R`), puis exécution des deux notebooks.
+
+**Résultats**
+- R : 17 packages installés en 50 s depuis le snapshot CRAN, sans erreur.
+- Python, 1ᵉʳ essai dans un dossier profond : **échec de TensorFlow** (chemin de fichier de plus de 260 caractères, limite Windows sans « long paths »), donc `tensorflow`, `arch`, `pmdarima` et `prophet` non installés. Documenté dans le README (prérequis : chemin court ou chemins longs activés).
+- Python, 2ᵉ essai dans un chemin court : installation en 6 min 30 s, `pip check` propre, environnement identique à `requirements-lock.txt`.
+- Notebook Python : exécuté sans erreur en 12 min 40 s. Les 58 tableaux de résultats sont identiques à ceux du dépôt (seuls les temps de calcul changent), réseaux de neurones compris.
+- Rmd : rendu sans erreur en 81 s avec la bibliothèque neuve ; `tab30`, `tab43` et `tab48` identiques octet pour octet.
+- Aucun import absent de `requirements.txt`, aucun chemin local en dur.
+
+**Corrections faites** : prérequis « chemin court » ajouté au README ; dossier vide `report/` supprimé (le README y renvoyait au lieu de `rapport/`) ; avertissement `PerformanceWarning` de pandas au §3.4 supprimé (index trié avant sélection).
+
+**Dépendances système (hors pip / CRAN)**, toutes listées dans le README : Python 3.11, R ≥ 4.3, Microsoft Visual C++ Redistributable (TensorFlow), Pandoc (rendu du Rmd et du rapport), connexion internet à l'installation. Microsoft Word est facultatif (conversion du rapport en PDF).
