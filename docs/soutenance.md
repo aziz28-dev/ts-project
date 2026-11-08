@@ -1,4 +1,4 @@
-# Préparation de la soutenance (phases 0 à 3.2)
+# Préparation de la soutenance (phases 0 à 3.3)
 
 Questions probables du jury et réponses courtes, appuyées sur nos propres résultats. Les numéros de section renvoient au notebook `notebooks/main_python.ipynb`.
 
@@ -91,6 +91,29 @@ L'écart z = β′y évolue selon z_t = (1 + β′α) z_{t−1}. Quand les deux 
 
 **Le VECM va-t-il mieux prévoir à 10 jours ?**
 Probablement pas. Avec une demi-vie de 63 jours, le rappel ne corrige qu'environ 10 % d'un écart en 10 jours. La section 6 le vérifiera.
+
+## GARCH (§3.3)
+
+**Pourquoi un GARCH ?**
+Les résidus de tous les modèles précédents ont des effets ARCH massifs (ARCH-LM(5) = 441) : les gros chocs se suivent. Le GARCH modélise la variance conditionnelle σ²_t, c'est-à-dire l'amplitude attendue demain. Il ne prévoit pas le sens du prix.
+
+**Pourquoi la loi de Student ?**
+Elle gagne 37,5 points de log-vraisemblance face à la loi normale pour un seul paramètre en plus (ν ≈ 7,5). Le test de Kolmogorov-Smirnov ne rejette pas l'adéquation des résidus standardisés à cette loi (p = 0,46).
+
+**Qu'est-ce que l'effet de levier ?**
+Dans le GJR, γ = 0,042 (p = 0,004) : après une baisse, la variance réagit avec α + γ = 0,085, soit deux fois plus qu'après une hausse (α = 0,043). Les mauvaises nouvelles augmentent davantage le risque. La figure 14 le montre : un choc de −3 % donne une variance de 3,87 le lendemain, contre 3,49 pour +3 %.
+
+**Que signifie α + β ≈ 0,999 ?**
+Une volatilité presque infiniment persistante : la demi-vie d'un choc serait de 2 à 4 ans, et la variance de long terme serait quatre fois la variance observée. Ce n'est pas crédible. Par sous-période, la persistance vaut 0,893 sur 2016–2019 (demi-vie de 6 jours) et 0,996 sur 2021–2024. La valeur proche de 1 est gonflée par le changement de niveau de la volatilité en 2020 : c'est l'effet décrit par Lamoureux et Lastrapes (1990).
+
+**Les résidus standardisés sont-ils propres ?**
+Presque. Ils ne sont plus autocorrélés (p = 0,97), et l'ARCH-LM tombe de 441 à 14, soit 97 % de moins. Un léger reste est significatif à 5 % (p = 0,016), mais il disparaît à 20 retards. Le GARCH(1,2) le supprime au prix de coefficients non identifiés : on ne l'a pas retenu.
+
+**Pourquoi la volatilité monte-t-elle le lendemain du choc, et pas le jour même ?**
+σ_t est calculée avec l'information disponible la veille. Le choc du 9 novembre 2020 (+11,9 %) fait passer σ de 36 % à 52 % le 10 novembre.
+
+**Le pic de 2022, c'est la guerre en Ukraine ?**
+En partie. L'invasion produit un pic de 46,9 % le 16 mars 2022. Mais le maximum de l'année (52,2 %) date du 24 juin 2022, lors de la chute du pétrole et des craintes de récession, quand le secteur de l'énergie perd 16,8 % en un mois (S&P Global).
 
 ## Usage de l'IA
 

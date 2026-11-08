@@ -1,6 +1,6 @@
 """Section 3 : modèles économétriques classiques et leurs diagnostics.
 
-3.1 ARIMA / SARIMA ; 3.2 VAR, Granger, cointégration, VECM. GARCH suivra.
+3.1 ARIMA / SARIMA ; 3.2 VAR, Granger, cointégration, VECM ; 3.3 GARCH.
 
 Convention : un ARIMA(p,1,q) sur le log-prix est estimé sous sa forme équivalente
 ARMA(p,q) sur le rendement r_t = 100 × Δ ln P_t (en %). La constante éventuelle
@@ -453,3 +453,131 @@ def vecm_diagnostics(v, name: str, hs=(10, 20)) -> dict:
     for j in range(e.shape[1]):
         out[f"p ARCH-LM(5) éq. {j + 1}"] = het_arch(e[:, j], nlags=5)[1]
     return out
+
+
+# ===========================================================================
+# 3.3 GARCH
+# ===========================================================================
+# Notation de la bibliothèque arch, reprise partout :
+#   σ²_t = ω + Σ α_i ε²_{t−i} + Σ γ_j ε²_{t−j}·1[ε_{t−j} < 0] + Σ β_k σ²_{t−k}
+#   p = nombre de termes ARCH (α), o = termes asymétriques GJR (γ), q = termes GARCH (β).
+#   « GARCH(1,2) » = 1 terme α et 2 termes β.
+
+def garch_label(p: int = 1, o: int = 0, q: int = 1, dist: str = "t") -> str:
+    name = "GJR" if o else "GARCH"
+    law = {"normal": "loi normale", "t": "loi de Student", "skewt": "Student asymétrique"}[dist]
+    return f"{name}({p},{q}) — {law}"
+
+
+def fit_garch(r: pd.Series, p: int = 1, o: int = 0, q: int = 1, dist: str = "t", mean: str = "Zero"):
+    """GARCH sur les rendements en %, par maximum de vraisemblance.
+
+    mean="Zero" par défaut : la moyenne retenue en 3.1 est la marche aléatoire sans
+    dérive (rendement moyen non significatif). Le modèle complet est donc
+    « ARIMA(0,1,0) + erreurs GARCH ». Erreurs-types robustes (Bollerslev-Wooldridge),
+    valeur par défaut de arch.
+    """
+    from arch import arch_model
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return arch_model(r, mean=mean, vol="GARCH", p=p, o=o, q=q, dist=dist,
+                          rescale=False).fit(disp="off")
+
+
+def persistence(res) -> float:
+    """Persistance de la variance : Σα + Σβ + Σγ/2.
+
+    Le terme GJR γ ne joue que pour les chocs négatifs, soit la moitié des cas
+    pour une loi symétrique, d'où le facteur 1/2.
+    """
+    pr = res.params
+    return float(pr.filter(like="alpha").sum() + pr.filter(like="beta").sum() + pr.filter(like="gamma").sum() / 2)
+
+
+def half_life(pers: float) -> float:
+    """Nombre de jours pour qu'un choc de variance perde la moitié de son effet : ln(0,5)/ln(persistance)."""
+    return float(np.log(0.5) / np.log(pers)) if 0 < pers < 1 else np.inf
+
+
+def garch_compare(r: pd.Series, specs: dict, dists=("normal", "t", "skewt"), mean: str = "Zero") -> pd.DataFrame:
+    """Tableau comparatif : vraisemblance, critères, contraintes de positivité, persistance."""
+    rows = []
+    for dist in dists:
+        for name, kw in specs.items():
+            res = fit_garch(r, dist=dist, mean=mean, **kw)
+            pr = res.params
+            var_pars = pr.drop([k for k in pr.index if k in ("mu", "nu", "lambda")])
+            pers = persistence(res)
+            rows.append({
+                "modèle": name, "loi": dist, "nb paramètres": len(pr),
+                "log-vraisemblance": res.loglikelihood, "AIC": res.aic, "BIC": res.bic,
+                "ω > 0 et α, γ, β ≥ 0": bool((var_pars > 0).iloc[0] and (var_pars.iloc[1:] >= 0).all()),
+                "persistance": pers, "persistance < 1": pers < 1, "demi-vie (jours)": half_life(pers),
+                "converge": res.convergence_flag == 0,
+            })
+    df = pd.DataFrame(rows).set_index(["modèle", "loi"])
+    df.insert(4, "ΔAIC", df["AIC"] - df["AIC"].min())
+    df.insert(6, "ΔBIC", df["BIC"] - df["BIC"].min())
+    return df.sort_values("BIC")
+
+
+def garch_params(res) -> pd.DataFrame:
+    """Coefficients, erreurs-types robustes et p-values."""
+    return pd.DataFrame({"coefficient": res.params, "erreur-type robuste": res.std_err,
+                         "statistique t": res.tvalues, "p-value": res.pvalues})
+
+
+def garch_diagnostics(res, name: str, lb_lags=(10, 20), arch_lags=(5, 10)) -> dict:
+    """Diagnostic des résidus standardisés z_t = ε_t / σ_t.
+
+    Si le modèle capte bien la variance, z_t doit être un bruit blanc (Ljung-Box
+    sur z), sans effet ARCH restant (Ljung-Box sur z², ARCH-LM), et suivre la loi
+    supposée : on teste l'adéquation à la loi de Student estimée par
+    Kolmogorov-Smirnov, et la normalité par Jarque-Bera (comparaison).
+    Pas de correction de ddl au Ljung-Box sur z : la moyenne n'a aucun paramètre ARMA.
+    """
+    z = pd.Series(res.std_resid).dropna()
+    out = {"modèle": name}
+    lb = acorr_ljungbox(z, lags=list(lb_lags))
+    lb2 = acorr_ljungbox(z ** 2, lags=list(lb_lags))
+    for lag in lb_lags:
+        out[f"p LB z ({lag})"] = lb.loc[lag, "lb_pvalue"]
+    for lag in lb_lags:
+        out[f"p LB z² ({lag})"] = lb2.loc[lag, "lb_pvalue"]
+    for lag in arch_lags:
+        lm, p, _, _ = het_arch(z, nlags=lag)
+        out[f"ARCH-LM({lag})"] = lm
+        out[f"p ARCH-LM({lag})"] = p
+    out["excès kurtosis z"] = stats.kurtosis(z)
+    out["p JB (normalité)"] = stats.jarque_bera(z).pvalue
+    if "nu" in res.params:
+        nu = float(res.params["nu"])
+        # Student standardisée (variance 1) : t(ν) multipliée par √((ν−2)/ν).
+        scale = np.sqrt((nu - 2) / nu)
+        out["ν"] = nu
+        out["p KS (Student ν)"] = stats.kstest(z, "t", args=(nu, 0, scale)).pvalue
+    return out
+
+
+def garch_subperiods(r: pd.Series, periods: dict, **kw) -> pd.DataFrame:
+    """Stabilité des paramètres : même GARCH estimé sur des sous-périodes."""
+    rows = []
+    for name, (start, end) in periods.items():
+        res = fit_garch(r.loc[start:end], **kw)
+        pers = persistence(res)
+        rows.append({"période": name, "n": int(res.nobs), **res.params.to_dict(),
+                     "persistance": pers, "demi-vie (jours)": half_life(pers)})
+    return pd.DataFrame(rows).set_index("période")
+
+
+def news_impact(res, eps=np.linspace(-6, 6, 241)) -> pd.Series:
+    """Courbe d'impact des chocs : variance du lendemain en fonction du choc d'aujourd'hui,
+    la variance d'aujourd'hui étant fixée à son niveau moyen sur l'échantillon."""
+    pr = res.params
+    sigma2_bar = float(np.mean(res.conditional_volatility ** 2))
+    a = pr.get("alpha[1]", 0.0)
+    g = pr.get("gamma[1]", 0.0)
+    b = pr.filter(like="beta").sum()
+    s2 = pr["omega"] + a * eps ** 2 + g * eps ** 2 * (eps < 0) + b * sigma2_bar
+    return pd.Series(s2, index=eps, name="variance conditionnelle du lendemain")

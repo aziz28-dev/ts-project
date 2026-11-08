@@ -110,3 +110,19 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 **Pour la section 6** : VAR(1) et VECM comme candidats multivariés ; la marche aléatoire (= VAR(0) sans constante) reste la référence.
 
 **Pondération de XOM dans XLE** : 24,47 % au 2026-11-05 (StockAnalysis), premier composant devant Chevron (18,78 %) ; valeur historique sur 2016-2024 non vérifiée. Voir `docs/sources.md`.
+
+## Phase 3.3 — GARCH (2026-11-08)
+
+**Implémentation** : `src/classical.py` (section 3.3) ; notebook §3.3. Tableaux tab25 à tab28, figures 12 à 14.
+
+**Résultats**
+- ARCH-LM sur les résidus de la marche aléatoire : 441,2 (5 retards), 491,6 (10), p < 0,0001.
+- 4 structures × 3 lois, moyenne nulle. Student ≫ normale (+37,5 de log-vraisemblance, BIC −67) ; Student asymétrique et ordres supérieurs n'apportent rien. **GJR(1,1)-t** meilleur AIC et BIC (BIC −0,5 seulement face au GARCH(1,1)-t ; LR = 8,2, p ≈ 0,004). Constante : μ = 0,027 (p = 0,27), BIC +6,5 → moyenne nulle.
+- GJR(1,1)-t : ω = 0,0094 (p = 0,066), α = 0,043, γ = 0,042 (p = 0,004), β = 0,935, ν = 7,47. Réaction aux baisses α + γ = 0,085, deux fois celle aux hausses.
+- Persistance 0,9993 (GJR), 0,9990 (GARCH) ; variance de long terme impliquée 13,7 et 10,2 %², contre 3,18 %² observée → invraisemblable. Sous-périodes (GARCH(1,1)-t) : 2016-2019 persistance 0,893 (demi-vie 6 jours) ; 2021-2024 0,996 (172 jours). **Persistance gonflée par la rupture de 2020** (Lamoureux et Lastrapes, 1990).
+- Résidus standardisés du GJR : LB z p = 0,97 ; ARCH-LM(5) 441 → 14,0 (−97 %) mais encore p = 0,016 ; LB z² p = 0,046 (10) et 0,33 (20) ; KS contre Student p = 0,46 ; excès de kurtosis 6,6 → 1,5. GARCH(1,2)-t et GARCH(1,1) normal suppriment le reste d'ARCH, mais le premier est mal identifié (β non significatifs) et le second a une moins bonne loi.
+- Volatilité conditionnelle : corrélation 0,97 avec la volatilité réalisée ; pics 40,5 % (2016-02-04), 107,4 % (2020-03-19), 46,9 % (2022-03-16, invasion), 52,2 % (2022-06-24, chute du pétrole en juin 2022). Le pic de 2022 est en juin, pas en février-mars comme le supposait le plan. Après le 2020-11-09, σ passe de 36,1 % à 52,5 % le lendemain.
+
+**Décision** : ARIMA(0,1,0) + GJR(1,1)-t ; GARCH(1,1)-t comme référence.
+
+**Pour la section 6** : couverture des intervalles à 95 % (GJR contre variance constante) ; prévision de variance (QLIKE) ; tester une ré-estimation glissante à cause de la persistance gonflée.
