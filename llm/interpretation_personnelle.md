@@ -1,6 +1,6 @@
 # Interprétation personnelle des résultats
 
-**Auteur :** Aziz
+**Auteurs :** Aziz Bellaaj, Mohamed Yassine Khiari
 **Date de rédaction (avant tout prompt LLM) :** 2026-11-08
 
 > Cette page est rédigée par l'étudiant, **avant** d'interroger le LLM. Elle sert de référence pour la comparaison humain / LLM (cahier §5). Environ une page. Pour chaque point, suivre la méthode : hypothèse nulle → statistique et p-value → décision → sens concret → conséquence.
