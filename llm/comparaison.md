@@ -26,6 +26,16 @@
 | FEVD | 84 % ou 0,3 % selon l'ordre de Cholesky : on ne peut pas dire qui entraîne qui | Non mentionnée | **Oubli du LLM** | Le résultat le plus piégeux du prompt est passé sous silence. Le décideur ne saura pas que la part de XLE n'est pas identifiable. |
 | Test de Granger | Prédictibilité incrémentale, non robuste (HC3, p = 0,20) | « Le test suggère initialement une **influence** de XLE sur XOM » | **Vocabulaire causal** | Granger mesure une prédictibilité, pas une influence (erreur 2 de la grille). L'erreur reste légère, car le LLM écrit ensuite qu'il n'y a pas de « relation de causalité solide ». |
 
+## Prompt 3 — Essai sans données (03a)
+
+Le prompt a été envoyé par erreur avant la phase 6, avec les champs de données encore vides. L'essai est conservé, car il révèle le comportement du LLM quand il n'a aucun chiffre.
+
+| Thème | Notre interprétation | LLM | Verdict | Justification |
+| --- | --- | --- | --- | --- |
+| Données absentes | — | « Il serait incorrect de formuler une recommandation sans connaître ces résultats » | **Bon comportement** | Le LLM n'invente aucun chiffre et signale que les données manquent. |
+| Achat si la prévision est « favorable » | La marche aléatoire prévoit le même prix chaque jour (rendement prévu nul) | Scénarios 1 et 2 : acheter si la prévision à 1 ou 5 jours indique une évolution favorable | **Erreur de raisonnement** | Avec ARIMA(0,1,0), la prévision ponctuelle ne peut jamais être « favorable » : ces scénarios ne peuvent pas se produire. Le LLM décrit le modèle correctement, mais n'en tire pas la conséquence. |
+| « Direction des prévisions » | Le GARCH prévoit l'amplitude, pas le sens (§3.3) | La décision doit tenir compte de « la direction des prévisions » et de la volatilité | **Erreur 3 de la grille** | Aucun des deux modèles ne fournit de direction. Seule l'amplitude du risque est prévisible. |
+
 ## Bilan
 
 | Verdict | Nombre |
