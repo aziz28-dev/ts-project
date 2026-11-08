@@ -376,8 +376,11 @@ fmt <- function(v) ifelse(is.na(suppressWarnings(as.numeric(v))), v, formatC(as.
 cmp_out <- data.frame(grandeur = cmp$description, Python = fmt(cmp$valeur_python), R = fmt(cmp$valeur_r),
                       `écart relatif` = ifelse(is.na(cmp$`écart relatif`), "", sprintf("%.2g", cmp$`écart relatif`)),
                       verdict = cmp$verdict, check.names = FALSE)
-write.csv(cbind(clé = cmp$clé, cmp_out), here("outputs", "tables", "tab30_comparaison_R_python.csv"),
-          row.names = FALSE, fileEncoding = "UTF-8", eol = "\n")   # LF : pas de faux diff git sous Windows
+# Connexion binaire : sous Windows, une connexion texte convertit "\n" en "\r\n" même avec eol = "\n",
+# ce qui ferait apparaître le fichier comme modifié dans git à chaque rendu.
+con <- file(here("outputs", "tables", "tab30_comparaison_R_python.csv"), open = "wb", encoding = "UTF-8")
+write.csv(cbind(clé = cmp$clé, cmp_out), con, row.names = FALSE, eol = "\n")
+close(con)
 table(cmp$verdict)
 cmp_out
 ```
