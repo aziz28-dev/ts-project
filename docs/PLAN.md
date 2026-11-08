@@ -67,8 +67,8 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 2 | ADF + KPSS, ordre d conclu | Sur niveaux et différences | Tableau des tests | Fait en Python ; R en phase 3d |
 | 3.1 | Ordres par ACF/PACF vs auto.arima/pmdarima | Deux approches comparées | Tableau AIC/BIC | Fait en Python ; R en phase 3d |
 | 3.1 | Ljung-Box, normalité, ARCH-LM sur résidus | Pour chaque modèle | Tableau diagnostics | Fait en Python ; R en phase 3d |
-| 3.2 | VAR (ordre par AIC/BIC) + Granger | VAR sur rendements XOM/XLE | Sorties + interprétation | À faire |
-| 3.2 | Johansen / Engle-Granger, VECM si cointégration | Sur log-prix | Terme α interprété | À faire |
+| 3.2 | VAR (ordre par AIC/BIC) + Granger | VAR sur rendements XOM/XLE | Sorties + interprétation | Fait en Python ; R en phase 3d |
+| 3.2 | Johansen / Engle-Granger, VECM si cointégration | Sur log-prix | Terme α interprété | Fait en Python ; R en phase 3d |
 | 3.3 | GARCH(1,1) + ordres supérieurs, résidus standardisés | `arch` / `rugarch`, loi t de Student | Graphe volatilité + événements | À faire |
 | 4.1 | LSTM + GRU, hyperparamètres justifiés, walk-forward | Keras, fenêtres glissantes | Courbes de perte, scores par fold | À faire |
 | 5 | 4 tâches LLM documentées, erreurs du LLM signalées | Prompts + réponses intégrales | Annexe LLM | À faire |

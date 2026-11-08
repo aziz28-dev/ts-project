@@ -1,0 +1,5 @@
+régression,déterministe,statistique,valeur critique 5 %,p-value,H0 rejetée (5 %)
+XOM_logp sur XLE_logp,constante,-3.4564886836779194,-3.3388337229948193,0.03645245634417404,True
+XOM_logp sur XLE_logp,constante + tendance,-3.4753408652094144,-3.784778730701014,0.10495565494693798,False
+XLE_logp sur XOM_logp,constante,-3.609232383879756,-3.3388337229948193,0.023864423172051126,True
+XLE_logp sur XOM_logp,constante + tendance,-3.6374496878171825,-3.784778730701014,0.07190641130578637,False

@@ -89,3 +89,24 @@ Reste à faire par l'étudiant : sourcer dans le rapport les événements associ
 - Diagnostics : ARIMA(0,1,0) → LB brut rejette, LB standardisé non (p = 0,98) ; JB = 4 142 ; ARCH-LM(5) = 441 (p < 0,0001). ARIMA(3,1,2) → LB standardisé rejette (p = 0,013), JB = 3 376, ARCH-LM(5) = 383.
 
 **Décision** : ARIMA(0,1,0) sans dérive (marche aléatoire) retenu ; ARIMA(3,1,2) conservé comme concurrent pour l'évaluation hors échantillon (§6, Diebold-Mariano). Effets ARCH et queues épaisses → §3.3 (GARCH-t).
+
+## Phase 3.2 — VAR, Granger, cointégration, VECM (2026-11-08)
+
+**Implémentation** : `src/classical.py` (section 3.2) ; notebook §3.2. Tableaux tab17 à tab24, figure 11.
+
+**Résultats**
+- Ordre du VAR (max 10) : AIC 9, FPE 9, HQ 7, BIC 0. Hors 2020 et sur rendements standardisés : **0 pour les quatre critères**. Le saut de l'AIC au retard 7 correspond à l'autocorrélation de XLE due à 2020 (§2.3).
+- Diagnostics : tous les VAR stables. Portmanteau (Hosking ajusté, codé à la main, vérifié identique à statsmodels) sur résidus standardisés : VAR(0) p = 0,77 ; VAR(1) p = 0,038 ; VAR(7) et VAR(9) p < 0,0001 → ajouter des retards crée de la structure parasite (même signature que l'ARIMA(3,1,2)). JB et ARCH-LM rejettent partout. Corrélation des résidus 0,915 : lien contemporain.
+- Coefficients du VAR(1) : +0,10 (XOM passé) et −0,13 (XLE passé) sur l'échantillon complet ; ≈ ±0,01 à 0,03 hors 2020.
+- Granger : F classique significatif presque partout ; HC3 robuste → rien à 1 retard, XLE → XOM seulement à 7 et 9 retards (p = 0,034 et 0,016) ; hors 2020, aucun test robuste ne rejette à 5 %. Conclusion : pas de prédictibilité croisée robuste (cohérent avec l'efficience).
+- Engle-Granger (constante) : p = 0,037 (XOM sur XLE) et 0,024 (XLE sur XOM) ; avec tendance : 0,105 et 0,072.
+- Johansen (constante) : k = 0 (ordre robuste) trace 14,73 → rejet à 10 % seulement ; k = 6 et 8 → rejet à 5 %. r ≤ 1 jamais rejeté.
+- Sous-périodes : 2016-2019 EG p = 0,081 ; 2021-2024 EG p = 0,232 → relation non significative dans chaque moitié.
+- **Cointégration jugée faible et fragile** ; VECM estimé conditionnellement (r = 1, k = 0, constante restreinte).
+- VECM : β = (1 ; −1,128), constante −0,453 ; α(XOM) = −0,0006 (p = 0,93), α(XLE) = +0,0093 (p = 0,16) ; β'α = −0,0110 → **demi-vie de 62,6 jours** (identique avec un AR(1) de l'écart, ρ = 0,989). Portmanteau standardisé p = 0,53.
+
+**Écart au plan** : la formule de demi-vie ln(0,5)/ln(1 + α) du plan suppose qu'un seul actif s'ajuste. En bivarié, la bonne vitesse est β'α (on obtiendrait sinon plus de 1 200 jours avec α(XOM)).
+
+**Pour la section 6** : VAR(1) et VECM comme candidats multivariés ; la marche aléatoire (= VAR(0) sans constante) reste la référence.
+
+**À sourcer dans le rapport** : la pondération de XOM dans l'ETF XLE.

@@ -1,6 +1,6 @@
 """Section 3 : modèles économétriques classiques et leurs diagnostics.
 
-3.1 ARIMA / SARIMA (ce module, première partie). VAR, VECM et GARCH suivront.
+3.1 ARIMA / SARIMA ; 3.2 VAR, Granger, cointégration, VECM. GARCH suivra.
 
 Convention : un ARIMA(p,1,q) sur le log-prix est estimé sous sa forme équivalente
 ARMA(p,q) sur le rendement r_t = 100 × Δ ln P_t (en %). La constante éventuelle
@@ -211,3 +211,245 @@ def decisions(diag: pd.DataFrame) -> pd.DataFrame:
             "p LB(10) standardisé": "autocorrélation LB(10) standardisé",
             "p JB": "non-normalité (JB)", "p ARCH(5)": "effet ARCH(5)", "p ARCH(10)": "effet ARCH(10)"}
     return diag[list(cols)].lt(ALPHA).rename(columns=cols).replace({True: "détecté", False: "non détecté"})
+
+
+# ===========================================================================
+# 3.2 VAR, causalité de Granger, cointégration, VECM
+# ===========================================================================
+
+def _versions(R: pd.DataFrame, vol_window: int = 21) -> dict:
+    """Trois versions d'un panel de rendements : complet, hors 2020, standardisé par la vol. passée."""
+    d = R.index
+    return {
+        "échantillon complet": R.reset_index(drop=True),
+        "hors 2020": R[d.year != 2020].reset_index(drop=True),
+        "standardisé (vol. 21 j passée)": (R / R.rolling(vol_window).std().shift(1)).dropna().reset_index(drop=True),
+    }
+
+
+def var_order_selection(R: pd.DataFrame, maxlags: int = 10) -> pd.DataFrame:
+    """Ordre du VAR choisi par AIC, BIC, HQ et FPE, sur les trois versions des rendements.
+
+    Même logique qu'en 3.1 : un retard retenu seulement sur l'échantillon complet,
+    et qui disparaît hors 2020 ou après standardisation, reflète l'hétéroscédasticité
+    et non une dynamique exploitable.
+    """
+    from statsmodels.tsa.api import VAR
+
+    rows = {name: VAR(X).select_order(maxlags).selected_orders for name, X in _versions(R).items()}
+    return pd.DataFrame(rows).T.rename(columns=str.upper)
+
+
+def var_ic_table(R: pd.DataFrame, maxlags: int = 10) -> pd.DataFrame:
+    """Valeur de chaque critère pour chaque ordre (échantillon complet)."""
+    from statsmodels.tsa.api import VAR
+
+    sel = VAR(R.reset_index(drop=True)).select_order(maxlags)
+    return pd.DataFrame({k.upper(): v for k, v in sel.ics.items()}).rename_axis("ordre p")
+
+
+def fit_var(R: pd.DataFrame, p: int):
+    from statsmodels.tsa.api import VAR
+
+    return VAR(R.reset_index(drop=True)).fit(p)
+
+
+def hosking_portmanteau(resid, h: int, var_order: int) -> dict:
+    """Portmanteau multivarié ajusté (Hosking, 1980) : H0 = pas d'autocorrélation jusqu'au retard h.
+
+    Écrit explicitement pour pouvoir l'appliquer aussi aux résidus standardisés.
+    ddl = K² (h − p), où p est l'ordre du VAR.
+    """
+    e = np.asarray(resid, dtype=float)
+    e = e - e.mean(axis=0)
+    T, K = e.shape
+    c0_inv = np.linalg.inv(e.T @ e / T)
+    q = 0.0
+    for j in range(1, h + 1):
+        cj = e[j:].T @ e[:-j] / T
+        q += np.trace(cj.T @ c0_inv @ cj @ c0_inv) / (T - j)
+    q *= T ** 2
+    df = K ** 2 * (h - var_order)
+    return {"Q": q, "ddl": df, "p-value": stats.chi2.sf(q, df) if df > 0 else np.nan}
+
+
+def _standardize(e: np.ndarray, vol_window: int = 21) -> np.ndarray:
+    z = pd.DataFrame(e)
+    return (z / z.rolling(vol_window).std().shift(1)).dropna().to_numpy()
+
+
+def var_diagnostics(res, name: str, hs=(10, 20)) -> dict:
+    """Diagnostic complet d'un VAR : stabilité, autocorrélation, normalité, effets ARCH.
+
+    - Stabilité : valeurs propres de la matrice compagnon de module < 1.
+    - Portmanteau de Hosking ajusté, sur résidus bruts puis standardisés par leur
+      volatilité passée (même contrôle qu'en §2.3 et §3.1).
+    - Jarque-Bera multivarié (Lütkepohl).
+    - ARCH-LM d'Engle équation par équation.
+    """
+    e = res.resid.to_numpy()
+    p = res.k_ar
+    # VAR(0) : pas de retard, donc pas de racine ; il est stable par construction.
+    out = {"modèle": name, "stable": bool(res.is_stable()) if p else True,
+           "module max (matrice compagnon)": float(np.abs(1 / res.roots).max()) if p else 0.0}
+    z = _standardize(e)
+    for h in hs:
+        out[f"p Portmanteau({h})"] = hosking_portmanteau(e, h, p)["p-value"]
+    for h in hs:
+        out[f"p Portmanteau({h}) standardisé"] = hosking_portmanteau(z, h, p)["p-value"]
+    nt = res.test_normality()
+    out["JB multivarié"] = float(nt.test_statistic)
+    out["p JB"] = float(nt.pvalue)
+    for j, col in enumerate(res.names):
+        out[f"ARCH-LM(5) {col}"] = het_arch(e[:, j], nlags=5)[0]
+        out[f"p ARCH-LM(5) {col}"] = het_arch(e[:, j], nlags=5)[1]
+    out["corrélation des résidus"] = float(np.corrcoef(e.T)[0, 1])
+    return out
+
+
+def granger_tests(R: pd.DataFrame, lags=(1, 7, 9), hac_lags: int = 7) -> pd.DataFrame:
+    """Causalité de Granger dans les deux sens : Wald F classique, robuste HC3 et HAC.
+
+    Le test F classique du VAR suppose des erreurs homoscédastiques ; avec des
+    effets ARCH massifs, il rejette trop souvent. HC3 corrige l'hétéroscédasticité,
+    HAC (Newey-West) aussi l'autocorrélation. On refait le tout hors 2020.
+    Chaque test : OLS d'une équation du VAR, H0 = tous les retards de l'autre variable nuls.
+    """
+    import statsmodels.api as sm
+
+    cols = list(R.columns)
+    samples = {"échantillon complet": R, "hors 2020": R[R.index.year != 2020]}
+    rows = []
+    for sname, S in samples.items():
+        S = S.reset_index(drop=True)
+        for p in lags:
+            X = pd.concat({f"{c}_L{l}": S[c].shift(l) for c in cols for l in range(1, p + 1)}, axis=1)
+            X = sm.add_constant(X).dropna()
+            for y, x in ((cols[0], cols[1]), (cols[1], cols[0])):
+                Y = S[y].loc[X.index]
+                hyp = ", ".join(f"{x}_L{l} = 0" for l in range(1, p + 1))
+                row = {"échantillon": sname, "retards p": p, "sens": f"{x} → {y}"}
+                for lab, cov, kw in (("classique", "nonrobust", None), ("HC3", "HC3", None),
+                                     ("HAC", "HAC", {"maxlags": hac_lags})):
+                    fit = sm.OLS(Y, X).fit(cov_type=cov, cov_kwds=kw)
+                    row[f"p {lab}"] = float(fit.wald_test(hyp, scalar=True, use_f=True).pvalue)
+                rows.append(row)
+    return pd.DataFrame(rows).set_index(["échantillon", "retards p", "sens"])
+
+
+def engle_granger(L: pd.DataFrame) -> pd.DataFrame:
+    """Engle-Granger dans les deux sens, avec constante puis constante + tendance.
+
+    H0 : pas de cointégration (le résidu de la régression de long terme a une racine
+    unitaire). Valeurs critiques de MacKinnon, plus sévères qu'un ADF simple car le
+    résidu est estimé.
+    """
+    from statsmodels.tsa.stattools import coint
+
+    a, b = L.columns
+    rows = []
+    for y, x in ((a, b), (b, a)):
+        for trend, lab in (("c", "constante"), ("ct", "constante + tendance")):
+            stat, p, cv = coint(L[y], L[x], trend=trend, autolag="aic")
+            rows.append({"régression": f"{y} sur {x}", "déterministe": lab, "statistique": stat,
+                         "valeur critique 5 %": cv[1], "p-value": p, "H0 rejetée (5 %)": p < ALPHA})
+    return pd.DataFrame(rows).set_index(["régression", "déterministe"])
+
+
+def johansen_table(L: pd.DataFrame, k_list: dict, det_order: int = 0) -> pd.DataFrame:
+    """Tests de la trace et de la valeur propre maximale pour plusieurs nombres de retards.
+
+    k_list : {libellé: k_ar_diff}. det_order = 0 : constante non restreinte.
+    Lecture séquentielle : on teste r = 0 ; si rejeté, on teste r ≤ 1.
+    """
+    from statsmodels.tsa.vector_ar.vecm import coint_johansen
+
+    rows = []
+    for lab, k in k_list.items():
+        j = coint_johansen(L.reset_index(drop=True), det_order, k)
+        for i, h0 in enumerate(("r = 0", "r ≤ 1")):
+            rows.append({"retards (Δ)": lab, "H0": h0,
+                         "trace": j.lr1[i], "VC trace 10 %": j.cvt[i, 0], "VC trace 5 %": j.cvt[i, 1],
+                         "λmax": j.lr2[i], "VC λmax 10 %": j.cvm[i, 0], "VC λmax 5 %": j.cvm[i, 1]})
+    df = pd.DataFrame(rows).set_index(["retards (Δ)", "H0"])
+
+    def verdict(stat, cv10, cv5):
+        return np.where(stat > cv5, "rejet à 5 %", np.where(stat > cv10, "rejet à 10 % seulement", "non rejet"))
+
+    df["trace : décision"] = verdict(df["trace"], df["VC trace 10 %"], df["VC trace 5 %"])
+    df["λmax : décision"] = verdict(df["λmax"], df["VC λmax 10 %"], df["VC λmax 5 %"])
+    return df
+
+
+def cointegration_subperiods(L: pd.DataFrame, periods: dict) -> pd.DataFrame:
+    """Stabilité de la relation : Engle-Granger et Johansen (k = 0) par sous-période."""
+    from statsmodels.tsa.stattools import coint
+    from statsmodels.tsa.vector_ar.vecm import coint_johansen
+
+    a, b = L.columns
+    rows = []
+    for name, (start, end) in periods.items():
+        S = L.loc[start:end]
+        eg = coint(S[a], S[b], trend="c", autolag="aic")
+        j = coint_johansen(S.reset_index(drop=True), 0, 0)
+        rows.append({"période": name, "n": len(S), "Engle-Granger p-value": eg[1],
+                     "Johansen trace (r = 0)": j.lr1[0], "VC 10 %": j.cvt[0, 0], "VC 5 %": j.cvt[0, 1]})
+    return pd.DataFrame(rows).set_index("période")
+
+
+def fit_vecm(L: pd.DataFrame, k_ar_diff: int = 0, rank: int = 1):
+    """VECM avec constante restreinte à la relation de cointégration ('ci').
+
+    'ci' plutôt qu'une constante libre : la dérive des rendements n'est pas
+    significative (§2.2, §3.1), donc pas de tendance linéaire dans les niveaux ;
+    la constante fixe seulement le niveau moyen de l'écart d'équilibre.
+    """
+    from statsmodels.tsa.vector_ar.vecm import VECM
+
+    return VECM(L.reset_index(drop=True), k_ar_diff=k_ar_diff, coint_rank=rank, deterministic="ci").fit()
+
+
+def vecm_summary(v, names) -> pd.DataFrame:
+    """β normalisé, α avec p-values, vitesse β'α et demi-vie de l'écart à l'équilibre.
+
+    L'écart z_t = β'y_t suit z_t = (1 + β'α) z_{t−1} + bruit : sa vitesse de retour
+    β'α combine l'ajustement des DEUX actifs. Demi-vie = ln(0,5) / ln(1 + β'α).
+    La formule à un seul α, ln(0,5)/ln(1 + α_i), ne vaut que si un seul actif s'ajuste.
+    """
+    a, b = v.alpha.ravel(), v.beta.ravel()
+    speed = float(b @ a)
+    rows = [{"paramètre": f"β ({n})", "valeur": b[i], "p-value": np.nan} for i, n in enumerate(names)]
+    rows.append({"paramètre": "constante de la relation", "valeur": float(v.const_coint.ravel()[0]), "p-value": np.nan})
+    rows += [{"paramètre": f"α ({n})", "valeur": a[i], "p-value": float(v.pvalues_alpha.ravel()[i])}
+             for i, n in enumerate(names)]
+    rows.append({"paramètre": "vitesse de l'écart β'α", "valeur": speed, "p-value": np.nan})
+    rows.append({"paramètre": "demi-vie de l'écart (jours de bourse)",
+                 "valeur": float(np.log(0.5) / np.log(1 + speed)) if -2 < speed < 0 else np.inf, "p-value": np.nan})
+    return pd.DataFrame(rows).set_index("paramètre")
+
+
+def spread_half_life(z: pd.Series) -> dict:
+    """Demi-vie d'un écart par AR(1) : z_t = ρ z_{t−1} + u_t ⇒ demi-vie = ln(0,5)/ln(ρ)."""
+    import statsmodels.api as sm
+
+    zc = (z - z.mean()).to_numpy()
+    rho = float(sm.OLS(zc[1:], zc[:-1]).fit().params[0])
+    return {"rho": rho, "demi-vie (jours)": float(np.log(0.5) / np.log(rho)) if 0 < rho < 1 else np.inf}
+
+
+def vecm_diagnostics(v, name: str, hs=(10, 20)) -> dict:
+    """Mêmes diagnostics qu'un VAR, sur les résidus du VECM."""
+    e = np.asarray(v.resid)
+    p = v.k_ar  # ordre du VAR en niveaux = k_ar_diff + 1
+    out = {"modèle": name}
+    z = _standardize(e)
+    for h in hs:
+        out[f"p Portmanteau({h})"] = hosking_portmanteau(e, h, p)["p-value"]
+    for h in hs:
+        out[f"p Portmanteau({h}) standardisé"] = hosking_portmanteau(z, h, p)["p-value"]
+    nt = v.test_normality()
+    out["JB multivarié"] = float(nt.test_statistic)
+    out["p JB"] = float(nt.pvalue)
+    for j in range(e.shape[1]):
+        out[f"p ARCH-LM(5) éq. {j + 1}"] = het_arch(e[:, j], nlags=5)[1]
+    return out
