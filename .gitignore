@@ -1,0 +1,35 @@
+# Environnements
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.Rhistory
+.RData
+.Rproj.user/
+
+# Rendus intermédiaires R
+notebooks/*_files/
+notebooks/*.html
+
+# Données : data/raw/ est VERSIONNÉ (cache Yahoo, cahier §8.3) ; processed se régénère
+data/processed/*
+!data/processed/.gitkeep
+
+# Archive d'envoi
+*.zip
+
+# Secrets (clés API LLM éventuelles)
+.env
+
+# Éditeur, système, outils
+.vscode/
+.idea/
+.claude/settings.local.json
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
+
+# Fichiers temporaires Office (rapport ouvert dans Word)
+~$*

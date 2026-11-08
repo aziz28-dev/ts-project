@@ -1,0 +1,48 @@
+# Paramètres centralisés de l'étude : modifier ici, jamais en dur dans le code,
+# pour que Python et R utilisent exactement les mêmes réglages.
+
+data:
+  source: "Yahoo Finance"
+  # Action pétrolière + ETF de son secteur : couple propice à la cointégration (cahier §3.2).
+  tickers:
+    target: "XOM"        # série principale (ARIMA, GARCH, LSTM/GRU)
+    sector: "XLE"        # indice sectoriel (VAR, cointégration)
+    exogenous: "BZ=F"    # Brent, 3e variable ou exogène (extension §7)
+  price_column: "Adj Close"   # ajusté des dividendes et splits
+  # Date de fin figée : le notebook doit redonner les mêmes résultats à chaque exécution.
+  start: "2016-01-01"
+  end: "2025-12-31"      # incluse ; yfinance attend end exclusive, le code ajoute 1 jour
+  frequency: "B"         # jours de bourse ; calendrier irrégulier, pas de ffill
+
+split:
+  train_ratio: 0.9       # coupure chronologique 90/10, jamais aléatoire (cahier §1.3)
+
+features:
+  realized_vol_window: 21    # ~1 mois de bourse
+  annualization: 252         # jours de bourse par an
+  moving_average_window: 50
+  outlier_window: 63         # IQR glissant sur ~1 trimestre
+  outlier_iqr_k: 3.0
+
+forecast:
+  horizon: 10                # h = 5 à 10 exigé (cahier §6)
+  eval_horizons: [1, 5, 10]  # horizons rapportés dans le tableau unique
+  refit_every: 20            # ré-estimation des modèles classiques en rolling origin
+  confidence_level: 0.95
+
+deep:
+  windows: [20, 60]
+  n_splits: 5                # walk-forward TimeSeriesSplit
+  seeds: [42, 43, 44]        # robustesse : 3 entraînements
+  early_stopping_patience: 10
+  validation_ratio: 0.1      # derniers 10 % du train, dans l'ordre chronologique
+
+seed: 42
+
+paths:
+  raw: "data/raw"
+  processed: "data/processed"
+  figures: "outputs/figures"
+  tables: "outputs/tables"
+  llm_prompts: "llm/prompts"
+  llm_responses: "llm/responses"
