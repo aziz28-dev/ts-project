@@ -1,0 +1,101 @@
+# Préparation de la soutenance (phases 0 à 3.2)
+
+Questions probables du jury et réponses courtes, appuyées sur nos propres résultats. Les numéros de section renvoient au notebook `notebooks/main_python.ipynb`.
+
+## Données et méthode générale
+
+**Pourquoi XOM et XLE ?**
+Une action et l'ETF de son secteur partagent un facteur commun (XOM pèse environ un quart de XLE : 24,47 % en novembre 2026). Ce couple permet d'étudier la cointégration et la volatilité sur des crises identifiables : 2020 et 2022.
+
+**Pourquoi l'Adj Close plutôt que le Close ?**
+L'Adj Close réintègre les dividendes, et mesure donc le rendement réellement obtenu. Sur Yahoo, le Close est déjà ajusté des splits.
+
+**Pourquoi lire le cache plutôt que retélécharger ?**
+Yahoo recalcule l'Adj Close de tout l'historique à chaque nouveau dividende. Sans fichier figé, deux exécutions à des dates différentes donneraient des chiffres différents.
+
+**Pourquoi ne pas remplir les jours fériés (ffill) ?**
+Recopier le prix de la veille crée des rendements exactement nuls qui n'ont jamais existé. La variance serait sous-estimée et le GARCH biaisé.
+
+**Pourquoi tester sur le train uniquement ?**
+Choisir un modèle en regardant le test, c'est utiliser l'avenir pour décider : une fuite d'information. Le test ne sert qu'à l'évaluation finale (section 6).
+
+**Le test est plus calme que le train : est-ce un problème ?**
+C'est une limite, pas une erreur : la volatilité réalisée maximale de XOM vaut 47 % sur le test, contre 109 % sur le train. Le découpage chronologique 90/10 est imposé par le cahier, et choisir la période de test après coup serait un biais. On le signale, et la validation walk-forward (section 4) évalue aussi les modèles sur des périodes agitées.
+
+## Analyse exploratoire (§2)
+
+**Pourquoi ADF et KPSS ensemble ?**
+Leurs hypothèses nulles sont opposées : racine unitaire pour l'ADF, stationnarité pour le KPSS. Quand les deux concordent, la conclusion est solide. Pour le log-prix, l'ADF ne rejette pas (p ≥ 0,53) et le KPSS rejette (p < 0,01) : I(1). Pour les rendements, c'est l'inverse : I(0). Donc **d = 1**.
+
+**Le krach de 2020 ne fausse-t-il pas l'ADF ?**
+C'est le risque identifié par Perron (1989). On l'a testé avec Zivot-Andrews, qui autorise une rupture : la racine unitaire n'est toujours pas rejetée (p de 0,18 à 0,48).
+
+**Ljung-Box rejetait le bruit blanc pour les rendements. Pourquoi conclure qu'ils sont un bruit blanc ?**
+Ljung-Box suppose une variance constante. En divisant les rendements par leur volatilité récente, le rejet disparaît (p = 0,98), et il disparaît aussi sans l'année 2020 (p = 0,44). L'autocorrélation apparente venait de la variance, pas de la moyenne.
+
+**Rendements non autocorrélés veut-il dire indépendants ?**
+Non. Les rendements sont imprévisibles en moyenne, mais leurs carrés sont fortement autocorrélés : les 40 retards sont significatifs, avec un maximum de 0,32. Leur amplitude est donc en partie prévisible, d'où le GARCH.
+
+**Pourquoi garder les valeurs aberrantes ?**
+Ce sont des chocs réels et documentés : guerre des prix du pétrole le 2020-03-09, vaccin le 2020-11-09, droits de douane en avril 2025. Ils sont communs aux deux actifs (11 jours). Les supprimer ferait disparaître ce que le GARCH doit modéliser et rétrécirait à tort les intervalles de prévision. On ajoute seulement une variable indicatrice.
+
+**Et si vous changez le seuil de détection ?**
+Le nombre de jours signalés varie de 11 à 66 selon le réglage. Mais un noyau de 11 jours (XOM) et de 14 jours (XLE), signalés par au moins 12 réglages sur 16, est entièrement retrouvé par notre réglage. Et comme les outliers sont conservés, le seuil ne change que l'indicatrice.
+
+## ARIMA (§3.1)
+
+**Pourquoi la marche aléatoire, alors qu'`auto_arima` choisit ARIMA(3,1,2) ?**
+1. **Le BIC choisit la marche aléatoire.** Il est convergent et pénalise davantage : 7,7 points par paramètre contre 2 pour l'AIC sur 2 261 observations.
+2. **Les racines d'ARIMA(3,1,2) s'annulent presque.** AR et MA ont des modules de 1,047 et 1,075 et décrivent le même cycle de 2,4 jours : le modèle est quasi non identifié.
+3. **Son gain d'AIC vient de 2020.** Il s'inverse sur les rendements standardisés : +9,2.
+4. **Ses résidus standardisés restent autocorrélés** (p = 0,013), contrairement à ceux de la marche aléatoire (p = 0,98).
+
+On le garde comme concurrent pour l'évaluation hors échantillon (section 6).
+
+**Qu'est-ce qu'une quasi-annulation des racines ?**
+Quand le polynôme AR et le polynôme MA ont presque les mêmes racines, ils se simplifient dans φ(L)/θ(L). Le modèle équivaut alors à un modèle plus petit, avec des coefficients énormes et opposés (ici −1,66 et +1,65).
+
+**L'AIC et le test du rapport de vraisemblance favorisaient le SARIMA. Pourquoi l'écarter ?**
+Le test LR compare des vraisemblances gaussiennes à variance constante. Avec des effets ARCH, il rejette trop souvent. Le test de Wald robuste ne trouve pas le coefficient saisonnier significatif (p = 0,12), le BIC ne voit aucun gain, et sans 2020 le terme saisonnier dégrade l'AIC. Enfin, « s = 5 » n'est même pas une semaine fixe : à cause des jours fériés, seuls 82 % des couples (t, t−5) tombent le même jour de la semaine.
+
+**Les résidus de la marche aléatoire ne sont pas normaux : le modèle est-il invalide ?**
+Il décrit correctement la moyenne : aucune autocorrélation une fois la volatilité neutralisée. Ce qu'il ne modélise pas, c'est la variance (ARCH-LM = 441) et les queues épaisses (Jarque-Bera = 4 142). Ce sont exactement les défauts que traite un GARCH à loi de Student.
+
+**Pourquoi des erreurs-types robustes ?**
+Avec de l'hétéroscédasticité, les erreurs-types classiques sont trop petites et font paraître significatifs des coefficients qui ne le sont pas.
+
+## VAR, Granger, cointégration (§3.2)
+
+**Pourquoi le VAR sur les rendements et la cointégration sur les log-prix ?**
+Le VAR exige des séries stationnaires : les rendements sont I(0). La cointégration n'a de sens qu'entre séries I(1), puisqu'elle cherche une combinaison stationnaire de deux séries qui ne le sont pas.
+
+**Granger, est-ce une causalité ?**
+Non. « XLE cause XOM au sens de Granger » signifie seulement que le passé de XLE améliore la prévision de XOM. Les deux réagissent à la même information sectorielle, et un décalage peut venir de différences de liquidité. Ici, il n'y a de toute façon pas de prédictibilité robuste : le test F classique rejette, mais les tests robustes sans 2020 ne rejettent plus au seuil de 5 %.
+
+**Pourquoi le VAR(0) quand l'AIC propose 9 retards ?**
+Sans 2020, ou sur rendements standardisés, les quatre critères choisissent 0 retard. Le saut de l'AIC au retard 7 venait de 2020, et le VAR(0) est le seul dont les résidus standardisés ne sont pas autocorrélés (p = 0,77).
+
+**Y a-t-il cointégration ?**
+Elle est faible et fragile :
+- Engle-Granger rejette l'absence de cointégration à 5 % (p = 0,037) ;
+- Johansen, avec l'ordre robuste, ne rejette qu'à 10 % (trace 14,73 contre une valeur critique de 15,49 à 5 %) ;
+- elle n'est significative dans aucune des deux sous-périodes.
+
+On estime le VECM conditionnellement, comme le demande le cahier.
+
+**Que signifient β et α ?**
+β est l'équilibre de long terme : ln XOM ≈ 1,128 × ln XLE − 0,453. α mesure la réaction de chaque actif à l'écart : α(XOM) ≈ 0 (p = 0,93) et α(XLE) = +0,009 (p = 0,16). Si l'ajustement existe, c'est XLE qui comble l'écart, mais aucun α n'est significatif.
+
+**Pourquoi la demi-vie utilise β′α et pas α ?**
+L'écart z = β′y évolue selon z_t = (1 + β′α) z_{t−1}. Quand les deux actifs s'ajustent, la vitesse de l'écart combine les deux α. La formule ln(0,5)/ln(1 + α) ne vaut que si un seul actif s'ajuste : avec α(XOM), elle donnerait plus de 1 200 jours. On trouve **62,6 jours**, et un AR(1) estimé directement sur l'écart donne la même valeur.
+
+**Le VECM va-t-il mieux prévoir à 10 jours ?**
+Probablement pas. Avec une demi-vie de 63 jours, le rappel ne corrige qu'environ 10 % d'un écart en 10 jours. La section 6 le vérifiera.
+
+## Usage de l'IA
+
+**Avez-vous utilisé une IA ?**
+Oui. Le code a été développé avec Claude Code, ce qui est déclaré dans le README et sera déclaré dans le rapport. La section 5 (LLM) est réalisée séparément, avec une interprétation personnelle rédigée **avant** de solliciter le LLM, comme l'exige le cahier.
+
+**Pouvez-vous expliquer cette ligne de code ?**
+Le jury peut pointer n'importe quel bloc : relire `src/` en s'appuyant sur les commentaires « pourquoi » de chaque bloc.
