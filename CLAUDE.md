@@ -10,7 +10,7 @@ Documents de référence (dans `docs/`) :
 - `docs/cahier_des_charges.md` : cahier des charges, **fait foi** en cas de conflit.
 - `docs/PLAN.md` : plan validé (phases 0 à 9, table de traçabilité des exigences, prompts par phase, checklist d'envoi).
 
-État actuel : phase 0 terminée, installation vérifiée (Python 3.11.9 dans `.venv`, R 4.6.2). Prochaine étape : phase 1 (données).
+État actuel : phases 0 et 1 terminées (installation vérifiée ; données préparées dans `src/data.py` et la section 1 de `notebooks/main_python.ipynb`). Prochaine étape : phase 2 (EDA). Le cache `data/raw/*.csv` fait foi : ne pas le retélécharger sans raison, car Yahoo recalcule l'Adj Close.
 
 Environnement local (Windows) :
 - Python du projet : `.venv\Scripts\python.exe`. Le `python3.exe` du PATH est le raccourci Microsoft Store, ne pas l'utiliser.

@@ -56,11 +56,11 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 
 | § | Exigence | Implémentation prévue | Preuve / livrable | Statut |
 | --- | --- | --- | --- | --- |
-| 1 | Thématique justifiée en une phrase | Finance XOM/XLE | Intro du rapport | À faire |
-| 1.1 | ≥ 5 ans journaliers, ≥ 1 indicateur technique | 2016–2025 ; log-rendement, volatilité réalisée 21 j, MM 50 j | `01_data`, tableau des variables | À faire |
-| 1.3 | Objet série temporelle natif, fréquence déclarée | `DatetimeIndex` jours ouvrés (Python), `xts` (R) | Code + `df.info()` | À faire |
-| 1.3 | Split chronologique 90/10 | Coupure à la date du 90e centile | Graphique train/test | À faire |
-| 1.3 | Source, période, ajustements documentés | Note sur Adjusted Close (dividendes, splits) | Section Données | À faire |
+| 1 | Thématique justifiée en une phrase | Finance XOM/XLE | Intro du rapport | Fait (notebook §1.1), à reprendre dans le rapport |
+| 1.1 | ≥ 5 ans journaliers, ≥ 1 indicateur technique | 2016–2025 ; log-rendement, volatilité réalisée 21 j, MM 50 j | `01_data`, tableau des variables | Fait en Python ; R en phase 3d |
+| 1.3 | Objet série temporelle natif, fréquence déclarée | `DatetimeIndex` jours ouvrés (Python), `xts` (R) | Code + `df.info()` | Fait en Python ; R en phase 3d |
+| 1.3 | Split chronologique 90/10 | Coupure à la date du 90e centile | Graphique train/test | Fait en Python ; R en phase 3d |
+| 1.3 | Source, période, ajustements documentés | Note sur Adjusted Close (dividendes, splits) | Section Données | Fait en Python ; R en phase 3d |
 | 2 | Visualisation, ACF/PACF brute et différenciée interprétées | Graphes + texte d'interprétation | Figures EDA | À faire |
 | 2 | Décomposition commentée | STL sur log-prix | Figure STL + commentaire | À faire |
 | 2 | Valeurs aberrantes détectées et traitées | IQR glissant sur rendements, indicatrice | Tableau des outliers | À faire |

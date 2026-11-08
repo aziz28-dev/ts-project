@@ -1,0 +1,16 @@
+variable,rôle,définition,unité
+XOM_price,target,"Prix de clôture ajusté (dividendes, splits) de XOM",USD
+XOM_logp,target,Log-prix l_t = ln(P_t),log(USD)
+XOM_ret,target,Log-rendement r_t = 100 × ln(P_t / P_{t-1}),%
+XOM_vol21,target,Volatilité réalisée : √252 × écart-type glissant de r_t sur 21 jours,% annualisé
+XOM_ma50,target,Moyenne mobile de P_t sur 50 jours,USD
+XLE_price,sector,"Prix de clôture ajusté (dividendes, splits) de XLE",USD
+XLE_logp,sector,Log-prix l_t = ln(P_t),log(USD)
+XLE_ret,sector,Log-rendement r_t = 100 × ln(P_t / P_{t-1}),%
+XLE_vol21,sector,Volatilité réalisée : √252 × écart-type glissant de r_t sur 21 jours,% annualisé
+XLE_ma50,sector,Moyenne mobile de P_t sur 50 jours,USD
+BZ=F_price,exogenous,"Cours de clôture du contrat à terme Brent BZ=F (échéance la plus proche, sans ajustement)",USD/baril
+BZ=F_logp,exogenous,Log-prix l_t = ln(P_t),log(USD)
+BZ=F_ret,exogenous,Log-rendement r_t = 100 × ln(P_t / P_{t-1}),%
+BZ=F_vol21,exogenous,Volatilité réalisée : √252 × écart-type glissant de r_t sur 21 jours,% annualisé
+BZ=F_ma50,exogenous,Moyenne mobile de P_t sur 50 jours,USD
