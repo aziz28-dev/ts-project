@@ -76,7 +76,8 @@ Chaque exigence du cahier des charges a une implémentation et une preuve vérif
 | 7 | Extensions : corrélation dynamique, variable exogène | Corrélation glissante 60 j annotée, VARX avec le Brent, DCC-GARCH | Figures 21-23, tableaux 44-48 | Fait (Python) : lien XOM – XLE renforcé depuis 2020, Brent explicatif mais pas prédictif ; DCC-GARCH codé à la main et vérifié avec `rmgarch` (corrélation dynamique, Engle-Sheppard p < 0,0001) ; FinBERT non réalisé |
 | 8.1 | Socle classique en R ET Python, code commenté « pourquoi » | `.Rmd` + `.ipynb` | Deux notebooks | Fait : `classical_R.Rmd` reproduit les phases 1 à 3, comparaison R/Python (91 grandeurs) ; commentaires « pourquoi » |
 | 8.3 | Notebook reproductible de bout en bout | Seed, versions, pas de chemin local | Exécution sur env. vierge | À faire |
-| 8.4 | Discussion critique (modèles + IA générative) | Section dédiée | Rapport | À faire |
+| 8.2 | Rapport Word ou PDF, 15 à 25 pages | `rapport/rapport.md` → `rapport.docx` et `rapport.pdf` | Rapport | Fait : 20 pages hors annexes (49 avec les annexes : reproduction, interprétation personnelle, prompts et réponses intégrales, comparaison LLM) |
+| 8.4 | Discussion critique (modèles + IA générative) | Section dédiée | Rapport | Fait : §9 du rapport (limites des modèles, réflexion générale sur l'IA générative) |
 
 ## 4. Architecture du dépôt et environnement
 

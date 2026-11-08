@@ -264,3 +264,12 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 **Décision.** Le lien XOM – XLE est significativement dynamique. Le DCC fournit une corrélation conditionnelle utilisable, par exemple, pour un ratio de couverture XOM / XLE quotidien.
 
 **FinBERT (extension 4 du plan) : écarté volontairement.** Le corpus gratuit disponible sur toute la période (communiqués 8-K sur SEC EDGAR) ne compterait qu'une quarantaine d'annonces de résultats : un test de l'effet du sentiment sur les rendements aurait très peu de puissance. Il demanderait aussi environ 1,5 Go de dépendances supplémentaires (PyTorch, transformers, modèle). À mentionner comme perspective dans le rapport, pour une raison méthodologique et non par manque de temps.
+
+## Phase 8 — Rapport (2026-11-08)
+
+**Fichiers** : `rapport/rapport.md` (source), `rapport/build_rapport.py` (assemblage + Pandoc + conversion PDF par Word), `rapport/rapport.docx` et `rapport/rapport.pdf`.
+
+- 20 pages hors annexes (pages 3 à 22), 49 au total. 10 figures, toutes numérotées, légendées avec leur numéro dans le notebook et suivies d'une interprétation ; chaque test avec H₀, statistique, p-value et décision.
+- Annexes générées automatiquement depuis `llm/` : reproduction (A), interprétation personnelle (B), prompts et réponses intégrales, reproduits sans retouche, y compris les formules du LLM (C), comparaison détaillée (D).
+- Format A4, tableaux en 9 pt, équations Word natives. Vérification visuelle de toutes les pages du corps et des annexes (rendu PDF).
+- FinBERT mentionné comme extension écartée pour raison méthodologique (§7.3 du rapport).

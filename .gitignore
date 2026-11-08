@@ -34,3 +34,6 @@ desktop.ini
 
 # Fichiers temporaires Office (rapport ouvert dans Word)
 ~$*
+
+# Modèle Word régénéré à chaque construction du rapport
+rapport/reference.docx
