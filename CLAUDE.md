@@ -10,7 +10,7 @@ Documents de référence (dans `docs/`) :
 - `docs/cahier_des_charges.md` : cahier des charges, **fait foi** en cas de conflit.
 - `docs/PLAN.md` : plan validé (phases 0 à 9, table de traçabilité des exigences, prompts par phase, checklist d'envoi).
 
-État actuel : phases 0 et 1 terminées (installation vérifiée ; données préparées dans `src/data.py` et la section 1 de `notebooks/main_python.ipynb`). Prochaine étape : phase 2 (EDA). Le cache `data/raw/*.csv` fait foi : ne pas le retélécharger sans raison, car Yahoo recalcule l'Adj Close.
+État actuel : phases 0, 1 et 2 terminées (données dans `src/data.py`, EDA dans `src/eda.py`, sections 1 et 2 de `notebooks/main_python.ipynb`). Conclusion de l'EDA : log-prix I(1), d = 1, D = 0 ; rendements bruit blanc en moyenne mais fortement hétéroscédastiques. Prochaine étape : phase 3.1 (ARIMA). Ajouter les sections suivantes à la suite du notebook sans réécrire les sections existantes : l'étudiant peut les avoir modifiées. Le cache `data/raw/*.csv` fait foi : ne pas le retélécharger sans raison, car Yahoo recalcule l'Adj Close.
 
 Environnement local (Windows) :
 - Python du projet : `.venv\Scripts\python.exe`. Le `python3.exe` du PATH est le raccourci Microsoft Store, ne pas l'utiliser.
