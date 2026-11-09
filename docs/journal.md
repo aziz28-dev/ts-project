@@ -289,3 +289,16 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 **Corrections faites** : prérequis « chemin court » ajouté au README ; dossier vide `report/` supprimé (le README y renvoyait au lieu de `rapport/`) ; avertissement `PerformanceWarning` de pandas au §3.4 supprimé (index trié avant sélection).
 
 **Dépendances système (hors pip / CRAN)**, toutes listées dans le README : Python 3.11, R ≥ 4.3, Microsoft Visual C++ Redistributable (TensorFlow), Pandoc (rendu du Rmd et du rapport), connexion internet à l'installation. Microsoft Word est facultatif (conversion du rapport en PDF).
+
+### Phase 9 — Test complet depuis un dossier profond (2026-11-09)
+
+**Protocole** : clone neuf depuis GitHub (commit `43c73c0`) dans un dossier de 131 caractères (scratchpad), sorties générées supprimées (`outputs/`, `data/processed/`), environnement court resté du test interrompu supprimé, puis `py -3.11 install.py` et `py -3.11 run_all.py`.
+
+**Résultats**
+- `install.py` : chemin jugé trop profond (131 + 161 + 10 > 260), environnement créé dans `C:\Users\Aziz\.venvs\ts-project` ; `pip check` propre, 17 packages R présents ; 4 min 33 s (cache pip disponible).
+- **Défaut trouvé** : au 1ᵉʳ lancement, `run_all.py` exécutait le notebook avec le noyau du `.venv` du projet principal, car le terminal VS Code l'avait activé (`VIRTUAL_ENV` et PATH) et le noyau `python3` lance le « python » du PATH. Le test n'était donc pas valable ; il a été arrêté.
+- **Correction** : `run_all.py` reproduit l'activation de l'environnement choisi (VIRTUAL_ENV, PATH en tête) et affiche le Python du noyau. Il exécute aussi le notebook avec `nbclient` en l'enregistrant après chaque cellule, ce qui permet de suivre l'exécution dans VS Code (`nbconvert --execute` n'écrit qu'à la fin).
+- 2ᵉ lancement : noyau dans `.venvs\ts-project` (vérifié sur les processus), 83 cellules sans erreur, Rmd rendu ; 13 min 18 s au total (grille LSTM/GRU : 8 min).
+- 62 tableaux et 24 figures produits. Comparaison au dépôt : 58 tableaux identiques octet pour octet (dont `tab30`, `tab43`, `tab48`, comparaisons R / Python) ; les 4 autres (`tab31`, `tab32`, `tab34`, `tab41`) ne diffèrent que par les colonnes de durée de calcul.
+
+**Conclusion.** L'installation et l'exécution marchent depuis un dossier profond, sans chemins longs Windows, et redonnent exactement les résultats du dépôt.

@@ -36,6 +36,8 @@ python run_all.py      # exécute main_python.ipynb puis rend classical_R.Rmd
 
 `install.py` vérifie aussi l'installation (`pip check`, versions affichées) et écrit l'emplacement de l'environnement dans `.venv-path`, que `run_all.py` relit.
 
+`run_all.py` utilise toujours cet environnement, même si un autre est déjà activé dans le terminal (VS Code par exemple) ; il affiche le Python du noyau Jupyter pour contrôle. Le notebook est enregistré après chaque cellule (`cellule N/83` dans la console) : on peut suivre l'exécution en ouvrant `notebooks/main_python.ipynb` dans VS Code ou Jupyter, sans le modifier pendant l'exécution (environ 13 min, dont 8 min pour la grille LSTM/GRU de la cellule 65).
+
 ## Installation manuelle
 
 Si le chemin du projet est court (ou si les chemins longs de Windows sont activés) :
