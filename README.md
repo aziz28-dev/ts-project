@@ -75,7 +75,7 @@ Aucune intervention manuelle n'est nécessaire. Tous les paramètres (tickers, d
 | `data/processed/` | Séries préparées, train/test (régénérées) |
 | `outputs/figures/`, `outputs/tables/` | Figures `figNN_nom.png` et tableaux CSV du rapport |
 | `llm/` | Prompts et réponses intégrales du LLM (section 5) |
-| `docs/` | Cahier des charges, plan, journal de bord |
+| `docs/` | Cahier des charges, journal de bord, sources externes |
 | `rapport/` | Rapport final : `rapport.docx` et `rapport.pdf`, source `rapport.md`, reconstruction par `python rapport/build_rapport.py` (Pandoc ; PDF via Microsoft Word si installé) |
 
 ## Note de transparence

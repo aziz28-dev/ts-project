@@ -165,6 +165,9 @@ L'ARIMA modélise la partie linéaire et le LSTM ses résidus. Il ne bat la marc
 **Pourquoi la sélection par gain et pas par RMSE ?**
 La fenêtre de 60 retire des observations, donc les RMSE bruts ne portent pas sur les mêmes échantillons. Le gain face à la prévision zéro, calculé sur les mêmes points, est comparable d'une configuration à l'autre.
 
+**Pourquoi pas de Ljung-Box / ARCH-LM sur les résidus du LSTM et du GRU ?**
+Le cahier exige le diagnostic des résidus pour les modèles économétriques du §3, dont les tests reposent sur des hypothèses (bruit blanc, homoscédasticité) : c'est fait pour ARIMA, VAR, VECM et GARCH. Un réseau n'a pas ces hypothèses ; on l'a donc jugé hors échantillon : walk-forward sur 5 folds, 3 seeds, puis 252 origines du test et Diebold-Mariano. Le réseau ne bat pas la marche aléatoire, donc ses erreurs contiennent au moins autant de structure que celles de la marche aléatoire. Ne pas affirmer de chiffre sur ces résidus : ce test n'a pas été fait.
+
 ## Prévision et évaluation (§6)
 
 **Pourquoi 252 origines et pas une seule prévision ?**
@@ -189,6 +192,9 @@ En le recalculant en R avec `forecast::dm.test` sur exactement les mêmes erreur
 
 **Pourquoi la MAPE ne se calcule-t-elle pas sur les rendements ?**
 Les rendements sont souvent proches de zéro : diviser par eux fait exploser l'erreur relative. On calcule toutes les métriques sur le prix en dollars.
+
+**Le VARX n'est pas dans le tableau unique (tab36) : pourquoi ?**
+Le tableau unique de la section 6 réunit les modèles du socle et du §4. Le VARX est une extension (§7) ajoutée ensuite ; il est évalué avec exactement le même protocole (252 origines, mêmes métriques sur le prix, Diebold-Mariano) dans tab46, où la baseline et le VAR(1) ont les mêmes valeurs que dans tab36. Les deux tableaux sont donc directement comparables.
 
 ## Extensions (§7)
 

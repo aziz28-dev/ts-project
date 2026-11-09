@@ -4,7 +4,7 @@ Résultats, décisions et justifications, phase par phase. Sert de base à la r�
 
 ## Phase 0 — Setup (2026-11-08)
 
-- Arborescence créée selon `docs/PLAN.md` §4.
+- Arborescence créée selon le plan de travail validé (structure décrite dans le README).
 - Paramètres centralisés dans `config.yaml` (XOM/XLE/BZ=F, 2016-01-01 → 2025-12-31, split 0.9, h = 10, seed 42).
 - `numpy` figé en 1.26.4 : `pmdarima` 2.0.4 et `tensorflow` 2.16 ne supportent pas numpy 2.
 - `scikit-learn` figé en 1.5.2 : `pmdarima` 2.0.4 casse avec 1.6.

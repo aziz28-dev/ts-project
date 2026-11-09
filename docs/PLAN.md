@@ -279,18 +279,19 @@ Compte environ trois semaines à temps partiel, en sécurisant d'abord le bloc A
 
 **Checklist avant envoi :**
 
-- [ ] Chaque modèle a son diagnostic de résidus interprété
-- [ ] ADF et KPSS rapportés avec H₀, statistique, p-value, décision
-- [ ] Un seul tableau de métriques avec la baseline et tous les modèles
-- [ ] Diebold-Mariano calculé sur les erreurs multi-origines
-- [ ] Socle classique présent en R et en Python
-- [ ] Partie avancée identifiée comme « Python uniquement »
-- [ ] Prompts et réponses LLM intégrales en annexe, erreurs du LLM signalées
-- [ ] Interprétation personnelle datée, rédigée avant le LLM
-- [ ] Limites et échecs rapportés (SARIMA écarté, baseline difficile à battre, cointégration)
-- [ ] Notebooks exécutés de bout en bout sur un environnement neuf
-- [ ] Rapport entre 15 et 25 pages hors annexes
+- [x] Chaque modèle a son diagnostic de résidus interprété (modèles classiques du §3, exigence du cahier ; les réseaux ne sont évalués que sur leurs erreurs de prévision)
+- [x] ADF et KPSS rapportés avec H₀, statistique, p-value, décision
+- [x] Un seul tableau de métriques avec la baseline et tous les modèles (tab36 ; le VARX, extension du §7, est comparé à part dans tab46)
+- [x] Diebold-Mariano calculé sur les erreurs multi-origines
+- [x] Socle classique présent en R et en Python
+- [x] Partie avancée identifiée comme « Python uniquement »
+- [x] Prompts et réponses LLM intégrales en annexe, erreurs du LLM signalées
+- [x] Interprétation personnelle datée, rédigée avant le LLM
+- [x] Limites et échecs rapportés (SARIMA écarté, baseline difficile à battre, cointégration)
+- [x] Notebooks exécutés de bout en bout sur un environnement neuf (2026-11-08, puis depuis un dossier profond avec install.py et run_all.py le 2026-11-09)
+- [x] Rapport entre 15 et 25 pages hors annexes
 - [ ] Date limite confirmée avec M. Dhouibi (au 2026-11-08 : pas encore fixée par l'enseignant ; celle du cahier, 12 octobre 2026, ne s'applique pas)
+- [x] Archive `ts-project.zip` construite par `git archive` (sans CLAUDE.md, docs/PLAN.md, docs/soutenance.md), vérifiée le 2026-11-09
 
 **Questions probables en soutenance :**
 
