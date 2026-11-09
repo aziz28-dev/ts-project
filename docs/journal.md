@@ -302,3 +302,11 @@ Sources des événements (2020-03-09, 2020-11-09, avril 2025) : trouvées et int
 - 62 tableaux et 24 figures produits. Comparaison au dépôt : 58 tableaux identiques octet pour octet (dont `tab30`, `tab43`, `tab48`, comparaisons R / Python) ; les 4 autres (`tab31`, `tab32`, `tab34`, `tab41`) ne diffèrent que par les colonnes de durée de calcul.
 
 **Conclusion.** L'installation et l'exécution marchent depuis un dossier profond, sans chemins longs Windows, et redonnent exactement les résultats du dépôt.
+
+### Rapport — version académique (2026-11-09)
+
+- Page de garde : logo TEK-UP officiel (`rapport/logo_tekup.png`, téléchargé depuis tek-up.de, seule version disponible 242 × 89 px, agrandie ×4 avec lissage), filière, module, titre, auteurs, encadrant (M. Ahmed Dhouibi), année universitaire 2026-2027.
+- Texte réécrit en prose académique : plus de gras ni de libellés « Interprétation. / Décision. », tableaux numérotés et légendés (tableaux 1 à 16, A.1), équations des modèles (ARMA, VAR, VECM, GJR, DCC, statistique de Diebold-Mariano, QLIKE ; vérifiées contre `src/`), citations (auteur, année) et bibliographie de 30 références. Résumé en français et abstract en anglais. Aucun chiffre modifié ni ajouté.
+- Corrections : la formule du rendement du tableau 2 contenait une tabulation parasite (« 100 ⇥imes ») ; la citation Bollerslev-Wooldridge porte désormais sur le GARCH (l'ARIMA utilise un sandwich QMLE).
+- Mise en page (`build_rapport.py`) : Times New Roman 12, texte justifié, interligne 1,15, marges de 2,5 cm, A4, numéro de page en pied de page sauf sur la page de garde, table des matières en champ Word, en-tête des tableaux en gras sur fond bleu clair. La déclaration d'usage de Claude Code (§8.3) est conservée.
+- 52 pages : corps pages 6 à 24 (19 pages), bibliographie pages 25 à 27, annexes ensuite.
