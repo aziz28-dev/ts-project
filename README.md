@@ -78,6 +78,6 @@ Aucune intervention manuelle n'est nécessaire. Tous les paramètres (tickers, d
 | `docs/` | Cahier des charges, journal de bord, sources externes |
 | `rapport/` | Rapport final : `rapport.docx` et `rapport.pdf`, source `rapport.md`, reconstruction par `python rapport/build_rapport.py` (Pandoc ; PDF via Microsoft Word si installé) |
 
-## Note de transparence
+## Section LLM
 
-Le code a été développé avec l'assistance de Claude Code. La section 5 (LLM) a été réalisée séparément ; prompts et réponses sont archivés dans `llm/`.
+Prompts et réponses intégrales du LLM (section 5) sont archivés dans `llm/`.

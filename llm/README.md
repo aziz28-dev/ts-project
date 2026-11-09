@@ -17,7 +17,6 @@ Ce dossier documente l'usage critique d'un LLM, comme le demande le cahier des c
 - **Nouvelle conversation** pour chaque prompt, sans historique, pour que le LLM ne voie pas nos conclusions.
 - **Réponse intégrale** copiée sans retouche, avec le nom exact du modèle (par exemple « ChatGPT, GPT-x ») et la date.
 - **Nommage** des réponses : `responses/NN_tache_<modele>_<AAAA-MM-JJ>.md`.
-- **Transparence** : le code du projet a été développé avec l'aide de Claude Code. Le LLM de cette section est utilisé à part, comme outil d'analyse dont on évalue la fiabilité.
 
 ## Grille de détection des erreurs du LLM
 

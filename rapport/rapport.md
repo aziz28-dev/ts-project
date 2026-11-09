@@ -495,10 +495,6 @@ Le modèle de langage retrouve rapidement les grandes lignes d'une stratégie de
 
 Il ne contrôle pas, en revanche, la cohérence entre un modèle et la décision qui en découle. Il envisage des scénarios impossibles avec une marche aléatoire et recommande de conserver l'action sans justification. Il omet les résultats qui nuancent l'analyse, comme la fragilité de la cointégration ou la dépendance de la FEVD à l'ordre des variables, et il ajoute des explications causales qui ne lui ont pas été fournies. Un décideur qui ne lirait que ses réponses retiendrait une image trop simple et trop assurée des résultats.
 
-## 8.3 Déclaration relative à l'usage d'outils d'IA
-
-Le code du projet a été développé avec l'aide d'un assistant de programmation (Claude Code). Chaque résultat a été exécuté et vérifié, notamment par la comparaison entre R et Python et par des contrôles croisés avec *statsmodels*, la fonction dm.test du paquet *forecast* et le paquet *rmgarch* ; chaque étape doit pouvoir être expliquée en soutenance. Le modèle de langage de la présente section a été utilisé séparément, comme un outil d'analyse dont nous évaluons la fiabilité.
-
 # 9. Discussion et conclusion
 
 ## 9.1 Limites des modèles
