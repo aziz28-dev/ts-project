@@ -26,24 +26,36 @@ Environnement local (Windows) :
 - Calendrier boursier irrégulier : **ne pas faire de ffill** (cela crée des rendements nuls artificiels qui biaisent GARCH). Les modèles reçoivent un index positionnel ; les dates servent aux graphes.
 - Outliers des rendements : **conservés** (chocs réels, modélisés par GARCH), signalés par une variable indicatrice. Ne jamais supprimer ou corriger une observation sans le justifier dans `docs/journal.md`.
 
-## Architecture prévue
+## Architecture
 
 ```
-config.yaml, requirements.txt (Python 3.11), install_packages.R (R ≥ 4.3), README.md
+config.yaml, requirements.txt (Python 3.11, dépendances directes), requirements-lock.txt (environnement exact vérifié),
+install_packages.R (R ≥ 4.3), install.py, run_all.py, README.md
 src/        data.py, eda.py, classical.py (ARIMA/VAR/VECM/GARCH + diagnostics),
-            deep.py (LSTM/GRU/hybride, walk-forward), evaluation.py (métriques, Diebold-Mariano), utils.py (seed, chemins)
-notebooks/  main_python.ipynb (étude complète de bout en bout), classical_R.Rmd (socle §3 en R)
-llm/        prompts/ et responses/ (intégrales, avec modèle + date)
-outputs/    figures/figNN_nom.png, tables/*.csv
+            deep.py (LSTM/GRU/hybride, walk-forward), evaluation.py (métriques, Diebold-Mariano),
+            extensions.py (corrélation glissante, VARX Brent, DCC-GARCH), utils.py (config, seed, chemins, sauvegardes)
+notebooks/  main_python.ipynb (étude complète de bout en bout), classical_R.Rmd (socle §3 en R + vérifications R)
+llm/        prompts/ et responses/ (intégrales, avec modèle + date), comparaison.md
+outputs/    figures/figNN_nom.png, tables/tabNN_nom.csv
+rapport/    rapport.md (source), build_rapport.py → rapport.docx / rapport.pdf (annexes recopiées depuis llm/)
 docs/       cahier_des_charges.md, PLAN.md, journal.md (résultats et décisions par phase, sert à rédiger le rapport)
 ```
 
 La logique va dans `src/*.py` ; les notebooks se limitent aux appels et aux interprétations en Markdown. Le socle classique (§3 : ARIMA, VAR, VECM, GARCH) doit exister **en R ET en Python**. La partie avancée (§4) est en Python uniquement et doit être identifiée comme telle.
 
-Commandes prévues, une fois la phase 0 faite :
-- `pip install -r requirements.txt` / `Rscript install_packages.R`
-- `jupyter nbconvert --to notebook --execute notebooks/main_python.ipynb` : contrôle d'exécution de bout en bout
-- `Rscript -e "rmarkdown::render('notebooks/classical_R.Rmd')"`
+Points qui demandent de lire plusieurs fichiers :
+- `src/utils.py` est le point d'entrée commun : `load_config()` (config.yaml, lu une fois), `path(key)` (dossiers de la section `paths`), `set_seed()` (inclut le déterminisme TensorFlow si TF est déjà importé), `save_fig(fig, NN, nom)` et `save_table(df, nom)`. Passer par ces fonctions : `save_table` force les fins de ligne LF, sinon git voit les CSV modifiés à chaque exécution.
+- Le Rmd **dépend** des sorties du notebook Python : il relit `outputs/tables/` (`tab29_reference_python`, `tab38_diebold_mariano`, `tab42_erreurs_test`, `tab47_dcc`, `tab47c_dcc_residus_train`) pour les comparaisons R / Python (`tab30`, `tab43`, `tab48`). Ordre obligatoire : notebook Python, puis Rmd.
+- La numérotation des figures et des tableaux suit l'ordre du rapport : vérifier le dernier numéro utilisé dans `outputs/` avant d'en ajouter.
+
+## Commandes
+
+- Installation : `python install.py` (`--no-r` : Python seulement). L'emplacement du venv est écrit dans `.venv-path`.
+- Tout exécuter : `python run_all.py` (`--no-r` : notebook Python seulement). Environ 13 minutes, dont environ 8 minutes pour la grille LSTM/GRU.
+- Contrôle rapide de l'environnement : `.venv\Scripts\python.exe -m src.utils` (racine, config, seed, versions).
+- Notebook seul : `jupyter nbconvert --to notebook --execute --inplace notebooks/main_python.ipynb`. Rmd seul : `Rscript -e "rmarkdown::render('notebooks/classical_R.Rmd')"`.
+- Rapport : `python rapport/build_rapport.py` (Pandoc ; le PDF demande Microsoft Word).
+- Il n'y a pas de suite de tests : la vérification se fait en réexécutant les notebooks et en comparant les tableaux de `outputs/tables/` (git diff).
 
 ## Règles méthodologiques (non négociables)
 

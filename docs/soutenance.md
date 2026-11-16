@@ -219,10 +219,10 @@ Par le test d'Engle et Sheppard (H₀ : corrélation constante), qui donne p < 0
 **Pourquoi rmgarch ne donne-t-il pas exactement les mêmes paramètres ?**
 À cause de l'étape 1 : les GARCH univariés de R et de Python ne partent pas de la même variance initiale, comme au §3d. Sur les mêmes résidus standardisés, les deux étapes 2 donnent le même résultat.
 
-## Usage de l'IA
+## Section LLM et code
 
-**Avez-vous utilisé une IA ?**
-Oui. Le code a été développé avec Claude Code, ce qui est déclaré dans le README et sera déclaré dans le rapport. La section 5 (LLM) est réalisée séparément, avec une interprétation personnelle rédigée **avant** de solliciter le LLM, comme l'exige le cahier.
+**Comment avez-vous utilisé le LLM de la section 5 ?**
+L'interprétation personnelle a été rédigée **avant** de solliciter le LLM, comme l'exige le cahier. Les trois prompts et les réponses intégrales sont dans `llm/`, et la comparaison humain / LLM dans `llm/comparaison.md`.
 
 **Pouvez-vous expliquer cette ligne de code ?**
 Le jury peut pointer n'importe quel bloc : relire `src/` en s'appuyant sur les commentaires « pourquoi » de chaque bloc.
