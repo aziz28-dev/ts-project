@@ -602,7 +602,6 @@ Zivot, E. et Andrews, D. W. K. (1992). Further evidence on the great crash, the 
 | Environnement R, installation manuelle | `Rscript install_packages.R` (instantané CRAN daté) |
 | Étude complète en Python, exécution manuelle | `jupyter nbconvert --to notebook --execute notebooks/main_python.ipynb` |
 | Socle classique en R | `Rscript -e "rmarkdown::render('notebooks/classical_R.Rmd')"`, après le notebook Python dont il relit les exports |
-| Rapport Word | `python rapport/build_rapport.py` |
 
 Table: Tableau A.1. Commandes de reproduction.
 
