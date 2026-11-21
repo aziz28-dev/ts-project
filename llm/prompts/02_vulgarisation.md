@@ -7,7 +7,7 @@
 2. Coller le texte ci-dessous.
 3. Enregistrer la réponse **intégrale** dans `llm/responses/02_vulgarisation_<modele>_<date>.md`, avec le nom du modèle et la date.
 
-Toutes les valeurs viennent des tables `tab16` à `tab35` et du journal (`docs/journal.md`).
+Toutes les valeurs viennent des tables `tab16` à `tab35` (`outputs/tables/`).
 
 ---
 

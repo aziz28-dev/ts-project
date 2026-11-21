@@ -98,7 +98,7 @@ Le tableau 1 recense les livrables. Toutes les valeurs citées dans ce rapport p
 | notebooks/classical_R.Rmd et son rendu HTML | Socle classique en R, comparaison avec Python, vérification du test de Diebold-Mariano et du DCC |
 | src/*.py | Code Python : données, analyse exploratoire, modèles classiques, réseaux, évaluation, extensions |
 | llm/ | Interprétation personnelle, prompts et réponses intégrales du modèle de langage, comparaison |
-| docs/journal.md, docs/sources.md | Résultats et décisions par étape ; sources des faits externes |
+| docs/sources.md | Sources des faits externes |
 
 Table: Tableau 1. Livrables du projet.
 
