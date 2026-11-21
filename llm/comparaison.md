@@ -1,6 +1,6 @@
 # Comparaison entre notre interprétation et celle du LLM
 
-**Auteurs :** Aziz Bellaaj, Mohamed Yassine Khiari
+**Auteurs :** Aziz Bellaaj, Mohamed Yassine Khiari, Ilyes Ouni
 **Date :** 2026-11-08
 
 **Sources comparées :**

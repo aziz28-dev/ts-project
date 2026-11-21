@@ -1,6 +1,6 @@
 # Mini-projet Séries Temporelles — TEK-UP 2026
 
-**Auteurs :** Aziz Bellaaj, Mohamed Yassine Khiari
+**Auteurs :** Aziz Bellaaj, Mohamed Yassine Khiari, Ilyes Ouni
 
 Modélisation, prévision et diagnostic de la série multidimensionnelle **XOM (ExxonMobil) + XLE (Energy Select Sector ETF)**, cours journaliers Yahoo Finance du 2016-01-01 au 2025-12-31. Le Brent (`BZ=F`) sert de variable exogène.
 

@@ -1,7 +1,7 @@
 ---
 lang: fr-FR
 title-meta: "Modélisation, prévision et diagnostic d'une série temporelle financière multidimensionnelle"
-author-meta: "Aziz Bellaaj, Mohamed Yassine Khiari"
+author-meta: "Aziz Bellaaj, Mohamed Yassine Khiari, Ilyes Ouni"
 ---
 
 ::: {custom-style="Cover Logo"}
@@ -29,7 +29,8 @@ Le cas d'ExxonMobil (XOM) et de l'ETF Energy Select Sector (XLE), 2016-2025
 ::: {custom-style="Cover Names"}
 Réalisé par\
 Aziz Bellaaj\
-Mohamed Yassine Khiari
+Mohamed Yassine Khiari\
+Ilyes Ouni
 
 Encadré par\
 M. Ahmed Dhouibi
